@@ -3,6 +3,7 @@ package routes
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/gorilla/handlers"
@@ -100,7 +101,11 @@ func HandleRequest() {
 		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
 	)
 
-	// Inicializa o servidor na porta 8000
-	log.Fatal(http.ListenAndServe(":8000", corsHandler(r)))
+    // Use a variável de ambiente PORT
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8000" // Porta padrão caso PORT não esteja definida
+    }
 
+    log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }
