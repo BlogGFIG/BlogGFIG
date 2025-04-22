@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/MateusReinert/TCC_IFSC/dataBase"
-	"github.com/MateusReinert/TCC_IFSC/models"
+	"github.com/BlogGFIG/BlogGFIG/dataBase"
+	"github.com/BlogGFIG/BlogGFIG/models"
 	"gorm.io/gorm"
 )
 

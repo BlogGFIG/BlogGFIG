@@ -1,8 +1,8 @@
 package main
 
 import (
-	database "github.com/MateusReinert/TCC_IFSC/dataBase"
-	"github.com/MateusReinert/TCC_IFSC/routes"
+	database "github.com/BlogGFIG/BlogGFIG/dataBase"
+	"github.com/BlogGFIG/BlogGFIG/routes"
 )
 
 func main() {

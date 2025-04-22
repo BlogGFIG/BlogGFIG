@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/MateusReinert/TCC_IFSC/controllers"
+	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )

@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/MateusReinert/TCC_IFSC/dataBase"
-	"github.com/MateusReinert/TCC_IFSC/models"
-	usersettings "github.com/MateusReinert/TCC_IFSC/models/userSettings"
+	"github.com/BlogGFIG/BlogGFIG/dataBase"
+	"github.com/BlogGFIG/BlogGFIG/models"
+	usersettings "github.com/BlogGFIG/BlogGFIG/models/userSettings"
 
 	"gorm.io/gorm"
 )
