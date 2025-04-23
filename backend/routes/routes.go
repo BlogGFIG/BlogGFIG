@@ -102,10 +102,11 @@ func HandleRequest() {
 	)
 
     // Use a variável de ambiente PORT
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8000" // Porta padrão caso PORT não esteja definida
-    }
-
-    log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000" // Porta padrão caso PORT não esteja definida
+	}
+	
+	log.Printf("Servidor escutando na porta %s", port)
+	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }
