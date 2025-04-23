@@ -36,7 +36,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
           console.log(data.email);
           showSucessToast("Login realizado com sucesso!");
           Cookies.set("email", data.email, { expires: 7 });
-          window.location.href = "http://localhost:3000";
+          window.location.href = "https://frontend-gfig.onrender.com";
           return;
         }
       }

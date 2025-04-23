@@ -10,7 +10,7 @@ const UserList = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/users")
+    axios.get("https://backend-gfig.onrender.com/users")
       .then(response => {
         setUsers(response.data);
         setLoading(false);
@@ -35,7 +35,7 @@ const UserList = () => {
       requester_email: requesterEmail,
     };
 
-    axios.put("http://localhost:8000/toggleUserStatus", payload, {
+    axios.put("https://backend-gfig.onrender.com/toggleUserStatus", payload, {
       withCredentials: true
     })
       .then(() => {
@@ -68,13 +68,13 @@ const UserList = () => {
       requester_email: requesterEmail
     };
 
-    axios.put("http://localhost:8000/updateUserRole", payload, { withCredentials: true })
+    axios.put("https://backend-gfig.onrender.com/updateUserRole", payload, { withCredentials: true })
       .then(() => {
         // Exibe o toast de sucesso
         showSucessToast("Nível de usuário atualizado com sucesso!");
 
         // Recarregar os dados após salvar
-        axios.get("http://localhost:8000/users")
+        axios.get("https://backend-gfig.onrender.com/users")
           .then(response => {
             setUsers(response.data); // Atualiza o estado com os dados mais recentes
           })

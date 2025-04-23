@@ -11,7 +11,7 @@ const UserActiveList = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/users")
+    axios.get("https://backend-gfig.onrender.com/users")
       .then(response => {
         // Filtra apenas os usuários com user_type 'pending'
         const pendingUsers = response.data.filter(user => user.user_type === 'pending');
@@ -39,7 +39,7 @@ const UserActiveList = () => {
       role: newUserType
     };
 
-    axios.put("http://localhost:8000/approveOrRejectUser", payload, {
+    axios.put("https://backend-gfig.onrender.com/approveOrRejectUser", payload, {
       withCredentials: true
     })
       .then(response => {
