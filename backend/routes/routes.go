@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/gorilla/handlers"
@@ -101,12 +102,14 @@ func HandleRequest() {
 		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
 	)
 
-    // Use a variável de ambiente PORT
+	// Use a variável de ambiente PORT
 	port := os.Getenv("PORT")
+	port = strings.TrimSpace(port) // Remove espaços em branco, se houver
+	log.Printf("Valor da variável de ambiente PORT:%s", port)
 	if port == "" {
 		port = "8000" // Porta padrão caso PORT não esteja definida
 	}
-	
+
 	log.Printf("Servidor escutando na porta %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }
