@@ -96,7 +96,10 @@ func HandleRequest() {
 	// Configuração do CORS
 	corsHandler := handlers.CORS(
 		// Permite a origem específica, e permite credenciais (cookies, cabeçalhos)
-		handlers.AllowedOrigins([]string{"http://localhost:3000"}), // Origem específica
+		handlers.AllowedOrigins([]string{
+			os.Getenv("FRONTEND_ORIGIN"), // ex: https://meu-frontend.onrender.com - Render
+			"http://localhost:3000",      // para testes locais
+		}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
