@@ -40,21 +40,6 @@ func HandleRequest() {
 	// Rota para a atualização da senha (USUÁRIO AUTENTICADO) (PUT)
 	anyUserRoutes.HandleFunc("/senhaPage", controllers.RefreshPassword).Methods("POST")
 
-	// Rota para obter os padrões de privacidade
-	//r.HandleFunc("/padroesDePrivacidade", controllers.PrivacyCombo).Methods("GET")
-
-	// Rota para adicionar novos padrões de privacidade
-	//r.HandleFunc("/padroesDePrivacidade", controllers.ADDPrivacyCombo).Methods("POST")
-
-	// Rota para obter postagens sensíveis
-	//r.HandleFunc("/sensibilidadeDeConteudoPage", controllers.SensitivityPost).Methods("GET")
-
-	// Rota para obter visibilidade do perfil
-	//r.HandleFunc("/visibilidadeDoPerfilPage", controllers.ProfileVisibility).Methods("GET")
-
-	// Rota para adicionar visibilidade do perfil
-	//r.HandleFunc("/visibilidadeDoPerfilPage", controllers.ADDProfileVisibility).Methods("POST")
-
 	// Rota para redefinir senha (TODOS) (POST)
 	r.HandleFunc("/resetPassword", controllers.ResetPassword).Methods("POST")
 
