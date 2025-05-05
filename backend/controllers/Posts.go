@@ -50,7 +50,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validando se o usuário pode criar uma postagem
-	if user.UserType != "admin" && user.UserType != "master" && user.Status != "active" {
+	if user.UserType != "admin" && user.UserType != "master" {
 		// Se o usuário não for admin ou user, ou se o status não for ativo, negamos a criação da postagem
 		http.Error(w, "Usuário não autorizado a criar postagens", http.StatusForbidden)
 		return
