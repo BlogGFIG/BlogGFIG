@@ -245,7 +245,7 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Valida o método de assinatura
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Método de assinatura inválido")
+			return nil, fmt.Errorf("método de assinatura inválido")
 		}
 		// Retorna a chave secreta usada para assinar o token
 		return []byte("bloggfig@2025"), nil
@@ -356,7 +356,7 @@ func RefreshPassword(w http.ResponseWriter, r *http.Request) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Valida o método de assinatura
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Método de assinatura inválido")
+			return nil, fmt.Errorf("método de assinatura inválido")
 		}
 		// Retorna a chave secreta usada para assinar o token
 		return []byte("bloggfig@2025"), nil
@@ -595,7 +595,7 @@ func GetUserTypeByToken(w http.ResponseWriter, r *http.Request) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Valida o método de assinatura
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Método de assinatura inválido")
+			return nil, fmt.Errorf("método de assinatura inválido")
 		}
 		// Retorna a chave secreta usada para assinar o token
 		return []byte("bloggfig@2025"), nil
