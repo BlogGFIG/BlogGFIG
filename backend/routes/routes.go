@@ -27,7 +27,7 @@ func HandleRequest() {
     adminRoutes := r.PathPrefix("/admin").Subrouter()
     adminRoutes.Use(middlewares.Authorize("admin", "master"))
 
-	// Rota acessível para qualquer usuário (master, admin ou user)
+	// Rota acessível para qualquer usuário autênticado (master, admin ou user)
 	anyUserRoutes := r.PathPrefix("/anyUser").Subrouter()
 	anyUserRoutes.Use(middlewares.Authorize("master", "admin", "user"))
 
