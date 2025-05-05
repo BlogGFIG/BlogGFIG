@@ -9,5 +9,4 @@ type User struct {
 	Name      string    `json:"name"`
 	UserType  string    `gorm:"column:user_type" json:"user_type"`
 	CreatedAt time.Time `json:"created_at"`
-	Status   string `json:"status"` // "active" or "inactive"
 }

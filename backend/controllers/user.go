@@ -9,6 +9,7 @@ import (
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
+	"github.com/golang-jwt/jwt/v5"
 
 	"gorm.io/gorm"
 )
@@ -24,7 +25,6 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		}
 
 		user.UserType = "pending"
-		user.Status = "ativo"
 
 		var existingUser models.User
 		result := dataBase.DB.Where("email = ?", user.Email).First(&existingUser)
@@ -133,20 +133,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verifica se o status do usuário é "inativo"
-	if existingUser.Status == "inativo" {
-		http.Error(w, "Usuário inativo. Entre em contato com o suporte.", http.StatusForbidden)
-		return
-	}
-
-	// Verifica se o usuário foi aprovado (agora inclui "user", "admin" e "master")
-	validRoles := map[string]bool{
-		"user":   true,
-		"admin":  true,
-		"master": true,
-	}
-
-	if !validRoles[existingUser.UserType] {
-		http.Error(w, "Usuário não aprovado. Entre em contato com o suporte.", http.StatusForbidden)
+	if existingUser.UserType == "pending" || existingUser.UserType == "rejected" {
+		// Se o usuário estiver pendente ou reprovado, não pode fazer login
+		http.Error(w, "Usuário inativo ou reprovado. Entre em contato com o suporte.", http.StatusForbidden)
 		return
 	}
 
@@ -156,30 +145,46 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Gera o token JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"userId": existingUser.ID,
+		"role":   existingUser.UserType,
+		"exp":    time.Now().Add(time.Hour * 24).Unix(), // Expira em 24 horas
+	})
+
+	// Substitua "sua_chave_secreta" pela sua chave secreta
+	tokenString, err := token.SignedString([]byte("bloggfig@2025"))
+	if err != nil {
+		http.Error(w, "Erro ao gerar token", http.StatusInternalServerError)
+		return
+	}
+
 	// Login realizado com sucesso
 	fmt.Println("Login realizado com sucesso!")
 
-	// Cria a resposta com o userId para ser utilizado no front-end
+	// Cria a resposta com o token e o userId para ser utilizado no front-end
 	response := map[string]interface{}{
 		"userId": existingUser.ID,
+		"token":  tokenString,
 	}
 
-	// Envia a resposta com o userId
+	// Envia a resposta com o token e o userId
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
 // Ativar ou inativar um usuário
-func ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
+func AtivarOuInativar(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Estrutura para capturar o ID do usuário
+	// Estrutura para capturar o ID do usuário e a ação (aprovar/reprovar)
 	var requestData struct {
-		ID uint `json:"id"`
+		ID       uint `json:"id"`
+		Aprovado bool `json:"aprovado"` // true para aprovado, false para reprovado
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
@@ -201,21 +206,24 @@ func ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Alterna o status do usuário
-	newStatus := "ativo"
-	if user.Status == "ativo" {
-		newStatus = "inativo"
+	// Define o novo user_type com base na aprovação ou reprovação
+	newUserType := "user"
+	if !requestData.Aprovado {
+		newUserType = "rejected"
 	}
 
-	updateResult := dataBase.DB.Model(&user).Update("status", newStatus)
+	// Atualiza o user_type do usuário
+	updateResult := dataBase.DB.Model(&user).Update("user_type", newUserType)
 	if updateResult.Error != nil {
-		http.Error(w, "Erro ao atualizar status do usuário", http.StatusInternalServerError)
+		http.Error(w, "Erro ao atualizar tipo de usuário", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Status do usuário atualizado para '%s'", newStatus)))
+	w.Write([]byte(fmt.Sprintf("Usuário ID %d atualizado para tipo '%s'", requestData.ID, newUserType)))
 }
+
+// Atualiza a role de um usuário (apenas para usuários com role "master")
 func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	// Verifica se o método HTTP é PUT
 	if r.Method != http.MethodPut {
@@ -223,22 +231,63 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Obtém o token do cabeçalho Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
+
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
+
+	// Decodifica o token JWT
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Valida o método de assinatura
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Método de assinatura inválido")
+		}
+		// Retorna a chave secreta usada para assinar o token
+		return []byte("bloggfig@2025"), nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	// Extrai as claims do token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Erro ao extrair claims do token", http.StatusInternalServerError)
+		return
+	}
+
+	// Obtém o tipo de usuário e o ID do solicitante das claims
+	requesterRole, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Role do usuário não encontrada no token", http.StatusInternalServerError)
+		return
+	}
+
+	requesterID, ok := claims["userId"].(float64) // JWT armazena números como float64
+	if !ok {
+		http.Error(w, "ID do usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
+
 	// Estrutura para capturar o ID do usuário a ser atualizado e a nova role
 	var requestData struct {
-		Email string `json:"requester_email"` // E-mail do solicitante
-		ID    uint   `json:"id"`              // ID do usuário a ser atualizado
-		Role  string `json:"role"`            // Valores esperados: "admin", "user" ou "master"
+		ID   uint   `json:"id"`   // ID do usuário a ser atualizado
+		Role string `json:"role"` // Valores esperados: "admin", "user" ou "master"
 	}
 
 	// Decodifica o corpo da requisição
-	err := json.NewDecoder(r.Body).Decode(&requestData)
+	err = json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
 		http.Error(w, "Erro ao decodificar JSON", http.StatusBadRequest)
 		return
 	}
-
-	// Log para verificar o requestData recebido
-	fmt.Printf("Dados recebidos: E-mail do solicitante: %s, ID do usuário a ser alterado: %d, Nova Role: %s\n", requestData.Email, requestData.ID, requestData.Role)
 
 	// Valida a role fornecida
 	if requestData.Role != "admin" && requestData.Role != "user" && requestData.Role != "master" {
@@ -246,35 +295,15 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Busca o solicitante pelo e-mail fornecido
-	var requester models.User
-	result := dataBase.DB.Where("email = ?", requestData.Email).First(&requester)
-	if result.Error == gorm.ErrRecordNotFound {
-		http.Error(w, "Usuário solicitante não encontrado", http.StatusNotFound)
-		return
-	}
-
-	// Verifica erros ao buscar o usuário solicitante
-	if result.Error != nil {
-		http.Error(w, "Erro ao buscar usuário solicitante", http.StatusInternalServerError)
-		return
-	}
-
-	// Verifica se o usuário solicitante está ativo
-	if requester.Status != "ativo" {
-		http.Error(w, "Usuário solicitante está inativo. Permissão negada.", http.StatusForbidden)
-		return
-	}
-
-	// Verifica se o usuário solicitante tem a role "master"
-	if requester.UserType != "master" {
-		http.Error(w, "Permissão negada. Apenas usuários com a role 'Master' podem atualizar roles.", http.StatusForbidden)
+	// Verifica se o solicitante tem permissão para atualizar roles
+	if requesterRole != "master" {
+		http.Error(w, "Permissão negada. Apenas usuários com a role 'master' podem atualizar roles.", http.StatusForbidden)
 		return
 	}
 
 	// Busca o usuário a ser atualizado
 	var user models.User
-	result = dataBase.DB.First(&user, requestData.ID)
+	result := dataBase.DB.First(&user, requestData.ID)
 	if result.Error == gorm.ErrRecordNotFound {
 		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
 		return
@@ -294,7 +323,7 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 
 	// Permite que o "master" altere sua própria role e a de outros usuários
 	// Verifica se o usuário solicitante está tentando atualizar a própria role, mas permite para usuários 'master'
-	if requester.ID == user.ID && requester.UserType != "master" {
+	if uint(requesterID) == user.ID && requesterRole != "master" {
 		http.Error(w, "Usuário não pode alterar a própria role.", http.StatusForbidden)
 		return
 	}
@@ -311,55 +340,49 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("Role do usuário atualizada para '%s'", requestData.Role)))
 }
 
-func RefreshBio(w http.ResponseWriter, r *http.Request) {
-	var updateRequest models.Profile
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
-		return
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&updateRequest)
-	if err != nil {
-		http.Error(w, "Erro ao decodificar JSON", http.StatusBadRequest)
-		return
-	}
-
-	if updateRequest.Email == "" {
-		http.Error(w, "Email não fornecido", http.StatusBadRequest)
-		return
-	}
-
-	var existingUser models.Profile
-	result := dataBase.DB.Table("users").Where("email = ?", updateRequest.Email).First(&existingUser)
-
-	if result.Error == gorm.ErrRecordNotFound {
-		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-		return
-	}
-
-	if result.Error != nil {
-		http.Error(w, "Erro ao consultar usuário", http.StatusInternalServerError)
-		return
-	}
-
-	updateQuery := "UPDATE users SET bio = ? WHERE email = ?"
-	updateResult := dataBase.DB.Exec(updateQuery, updateRequest.Bio, updateRequest.Email)
-
-	if updateResult.Error != nil {
-		http.Error(w, "Erro ao atualizar biografia", http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Println("Biografia atualizada com sucesso!")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Biografia atualizada com sucesso"))
-}
-
 // Atualiza a senha quando o usuário já sabe a própria senha
 func RefreshPassword(w http.ResponseWriter, r *http.Request) {
+	// Obtém o token do cabeçalho Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
+
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
+
+	// Decodifica o token JWT
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Valida o método de assinatura
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Método de assinatura inválido")
+		}
+		// Retorna a chave secreta usada para assinar o token
+		return []byte("bloggfig@2025"), nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	// Extrai as claims do token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Erro ao extrair claims do token", http.StatusInternalServerError)
+		return
+	}
+
+	// Obtém o ID do usuário do token
+	userIdFromToken, ok := claims["userId"].(float64) // JWT armazena números como float64
+	if !ok {
+		http.Error(w, "ID do usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
+
 	var passwordUpdate models.Password
-	err := json.NewDecoder(r.Body).Decode(&passwordUpdate)
+	err = json.NewDecoder(r.Body).Decode(&passwordUpdate)
 	if err != nil {
 		http.Error(w, "Erro ao decodificar JSON", http.StatusBadRequest)
 		return
@@ -369,6 +392,12 @@ func RefreshPassword(w http.ResponseWriter, r *http.Request) {
 	result := dataBase.DB.Where("email = ?", passwordUpdate.Email).First(&existingUser)
 	if result.Error == gorm.ErrRecordNotFound {
 		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+		return
+	}
+
+	// Verifica se o ID do usuário no token corresponde ao ID do usuário no banco de dados
+	if uint(userIdFromToken) != existingUser.ID {
+		http.Error(w, "Usuário não autorizado a alterar esta senha", http.StatusForbidden)
 		return
 	}
 
@@ -389,7 +418,7 @@ func RefreshPassword(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Senha atualizada com sucesso"))
 }
 
-// Atualiza a senha quando o usuário esqueceu a senha atual
+// Atualiza a senha quando o usuário esqueceu a senha atual - Envio do email de redefinição
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
@@ -468,6 +497,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	log.Println("E-mail de redefinição de senha enviado com sucesso para:", passwordReset.Email)
 }
 
+// Atualiza a senha quando o usuário esqueceu a senha atual - Realizar a alteração
 func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
@@ -545,33 +575,52 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	log.Println("Senha atualizada com sucesso para:", passwordUpdate.Email)
 }
 
-func GetUserTypeByEmail(w http.ResponseWriter, r *http.Request) {
+func GetUserTypeByToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Captura o e-mail do parâmetro da URL
-	email := r.URL.Query().Get("email")
-	if email == "" {
-		http.Error(w, "E-mail não fornecido", http.StatusBadRequest)
+	// Obtém o token do cabeçalho Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
 		return
 	}
 
-	fmt.Printf("E-mail recebido: %s\n", email)
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
 
-	var user models.User
-	result := dataBase.DB.Where("email = ?", email).First(&user)
-	if result.Error == gorm.ErrRecordNotFound {
-		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+	// Decodifica o token JWT
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Valida o método de assinatura
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Método de assinatura inválido")
+		}
+		// Retorna a chave secreta usada para assinar o token
+		return []byte("bloggfig@2025"), nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Token inválido", http.StatusUnauthorized)
 		return
 	}
 
-	if result.Error != nil {
-		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
+	// Extrai as claims do token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Erro ao extrair claims do token", http.StatusInternalServerError)
 		return
 	}
 
+	// Obtém o tipo de usuário das claims
+	userType, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
+
+	// Retorna o tipo de usuário
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Tipo de usuário: %s", user.UserType)))
+	w.Write([]byte(fmt.Sprintf("Tipo de usuário: %s", userType)))
 }
