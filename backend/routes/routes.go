@@ -47,7 +47,7 @@ func HandleRequest() {
 	r.HandleFunc("/updatePassword", controllers.UpdatePassword).Methods("POST")
 
 	// Rota para criar uma postagem (USUÁRIO AUTENTICADO) (POST)
-	anyUserRoutes.HandleFunc("/posts", controllers.CreatePost).Methods("POST")
+	anyUserRoutes.HandleFunc("/create-post", controllers.CreatePost).Methods("POST")
 
 	// Rota para editar uma postagem (USUÁRIO AUTENTICADO) (PUT)
 	anyUserRoutes.HandleFunc("/edit-post", controllers.EditPost).Methods("PUT")
