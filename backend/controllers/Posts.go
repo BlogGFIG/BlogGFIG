@@ -8,12 +8,76 @@ import (
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
+	"github.com/golang-jwt/jwt/v5"
+
 	"gorm.io/gorm"
 )
 
+// Função para validar o token JWT e retornar as claims
+func validateToken(tokenString string) (jwt.MapClaims, error) {
+	// Decodifica o token JWT
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Valida o método de assinatura
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("método de assinatura inválido")
+		}
+		// Retorna a chave secreta usada para assinar o token
+		return []byte("bloggfig@2025"), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("token inválido ou expirado")
+	}
+
+	// Extrai as claims do token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("erro ao extrair claims do token")
+	}
+
+	return claims, nil
+}
+
+// CreatePost: Função para criar uma nova postagem
 func CreatePost(w http.ResponseWriter, r *http.Request) {
+	// Validação do token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
+
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
+
+	// Valida o token e obtém as claims
+	claims, err := validateToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Obtém o e-mail e o tipo de usuário das claims
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
+		return
+	}
+
+	userType, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
+
+	// Validando se o usuário pode criar uma postagem
+	if userType != "admin" && userType != "master" {
+		http.Error(w, "Usuário não autorizado a criar postagens", http.StatusForbidden)
+		return
+	}
+
 	// Defina o limite para o tamanho do arquivo
-	err := r.ParseMultipartForm(10 << 20) // 10 MB
+	err = r.ParseMultipartForm(10 << 20) // 10 MB
 	if err != nil {
 		http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
 		return
@@ -22,7 +86,6 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	// Pegando os dados do formulário
 	title := r.FormValue("title")
 	content := r.FormValue("content")
-	email := r.FormValue("email") // O e-mail do usuário vem do front-end
 	imageFile, _, err := r.FormFile("image")
 	if err != nil {
 		http.Error(w, "Erro ao obter a imagem", http.StatusBadRequest)
@@ -49,20 +112,13 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validando se o usuário pode criar uma postagem
-	if user.UserType != "admin" && user.UserType != "master" {
-		// Se o usuário não for admin ou user, ou se o status não for ativo, negamos a criação da postagem
-		http.Error(w, "Usuário não autorizado a criar postagens", http.StatusForbidden)
-		return
-	}
-
 	// Agora podemos armazenar a postagem, incluindo o user_id
 	post := models.Post{
 		Title:     title,
 		Content:   content,
 		Image:     imageBytes,
-		UserID:    user.ID, // Usando o user_id encontrado na busca
-		UserEmail: email,   // O e-mail também é inserido, mas depende da sua lógica de banco
+		UserID:    user.ID,
+		UserEmail: email,
 	}
 
 	// Inserção no banco de dados
@@ -73,9 +129,8 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enviar resposta de sucesso
-	w.WriteHeader(http.StatusCreated) // para enviar o status 201
+	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("Postagem criada com sucesso!"))
-
 }
 
 func GetPosts(w http.ResponseWriter, r *http.Request) {
@@ -107,67 +162,91 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 // EditPost: Função para editar uma postagem existente
 func EditPost(w http.ResponseWriter, r *http.Request) {
-	// Defina o limite para o tamanho do arquivo
-	err := r.ParseMultipartForm(10 << 20) // 10 MB
-	if err != nil {
-		http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
-		return
-	}
+    // Validação do token
+    authHeader := r.Header.Get("Authorization")
+    if authHeader == "" {
+        http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+        return
+    }
 
-	// Pegando os dados do formulário
-	postID := r.FormValue("post_id")
-	title := r.FormValue("title")
-	content := r.FormValue("content")
-	email := r.FormValue("email") // O e-mail do usuário vem do front-end
+    // Remove o prefixo "Bearer " do token
+    tokenString := authHeader[len("Bearer "):]
 
-	// Buscando o usuário com base no e-mail
-	var user models.User
-	result := dataBase.DB.Where("email = ?", email).First(&user)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-		return
-	}
+    // Valida o token e obtém as claims
+    claims, err := validateToken(tokenString)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusUnauthorized)
+        return
+    }
 
-	// Buscando a postagem com base no ID
-	var post models.Post
-	result = dataBase.DB.First(&post, postID)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			http.Error(w, "Postagem não encontrada", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
-		return
-	}
+    // Obtém o e-mail e o tipo de usuário das claims
+    email, ok := claims["email"].(string)
+    if !ok {
+        http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
+        return
+    }
 
-	// Validando se o usuário pode editar a postagem
-	if post.UserID != user.ID && user.UserType != "admin" {
-		http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
-		return
-	}
+    userType, ok := claims["role"].(string)
+    if !ok {
+        http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+        return
+    }
 
-	// Atualizando os campos da postagem
-	if title != "" {
-		post.Title = title
-	}
-	if content != "" {
-		post.Content = content
-	}
+    // Defina o limite para o tamanho do arquivo
+    err = r.ParseMultipartForm(10 << 20) // 10 MB
+    if err != nil {
+        http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
+        return
+    }
 
-	// Salvando as alterações no banco de dados
-	result = dataBase.DB.Save(&post)
-	if result.Error != nil {
-		http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
-		return
-	}
+    // Pegando os dados do formulário
+    postID := r.FormValue("post_id")
+    title := r.FormValue("title")
+    content := r.FormValue("content")
 
-	// Enviar resposta de sucesso
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Postagem editada com sucesso!"))
+    // Buscando a postagem com base no ID
+    var post models.Post
+    result := dataBase.DB.First(&post, postID)
+    if result.Error != nil {
+        if result.Error == gorm.ErrRecordNotFound {
+            http.Error(w, "Postagem não encontrada", http.StatusNotFound)
+            return
+        }
+        http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
+        return
+    }
+
+    // Validação de permissão para editar a postagem
+    if userType == "user" {
+        // Usuário comum só pode editar suas próprias postagens
+        if post.UserEmail != email {
+            http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
+            return
+        }
+    } else if userType != "admin" && userType != "master" {
+        // Apenas admin ou master podem editar qualquer postagem
+        http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
+        return
+    }
+
+    // Atualizando os campos da postagem
+    if title != "" {
+        post.Title = title
+    }
+    if content != "" {
+        post.Content = content
+    }
+
+    // Salvando as alterações no banco de dados
+    result = dataBase.DB.Save(&post)
+    if result.Error != nil {
+        http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
+        return
+    }
+
+    // Enviar resposta de sucesso
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("Postagem editada com sucesso!"))
 }
 
 // DeletePost: Função para deletar uma postagem existente e seus comentários

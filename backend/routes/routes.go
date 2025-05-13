@@ -91,6 +91,9 @@ func HandleRequest() {
 	// Rota para obter o tipo de usuário pelo e-mail (TODOS) (GET)
 	r.HandleFunc("/get-user-type", controllers.GetUserTypeByToken).Methods("GET")
 
+	// Rota para arquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
+	anyUserRoutes.HandleFunc("/archive-post", controllers.ArchivePost).Methods("PUT")
+
 	// Configuração do CORS
 	corsHandler := handlers.CORS(
 		// Permite a origem específica, e permite credenciais (cookies, cabeçalhos)
