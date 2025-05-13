@@ -94,6 +94,9 @@ func HandleRequest() {
 	// Rota para arquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
 	anyUserRoutes.HandleFunc("/archive-post", controllers.ArchivePost).Methods("PUT")
 
+	// Rota para desarquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
+	anyUserRoutes.HandleFunc("/unarchive-post", controllers.UnarchivePost).Methods("PUT")
+
 	// Configuração do CORS
 	corsHandler := handlers.CORS(
 		// Permite a origem específica, e permite credenciais (cookies, cabeçalhos)
