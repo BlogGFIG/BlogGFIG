@@ -1,10 +1,7 @@
 package routes
 
 import (
-	"log"
-	"net/http"
 	"os"
-	"strings"
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/BlogGFIG/BlogGFIG/middlewares"
@@ -14,7 +11,7 @@ import (
 )
 
 // HandleRequest configura todas as rotas do servidor
-func HandleRequest() {
+func HandleRequest() *mux.Router {
 	
 	// Rota acessível para usuários não autenticados
 	r := mux.NewRouter()
@@ -109,14 +106,5 @@ func HandleRequest() {
 		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
 	)
 
-	// Use a variável de ambiente PORT
-	port := os.Getenv("PORT")
-	port = strings.TrimSpace(port) // Remove espaços em branco, se houver
-	if port == "" {
-		log.Fatal("A variável de ambiente PORT não está definida. Certifique-se de configurá-la no Render.")
-	}
-
-	log.Printf("Servidor escutando na porta %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
-
+	return corsHandler(r).(*mux.Router) // Retorna o roteador com CORS configurado para o main
 }
