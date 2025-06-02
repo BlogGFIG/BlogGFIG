@@ -5,6 +5,7 @@ import (
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/BlogGFIG/BlogGFIG/middlewares"
+
 	//"github.com/go-playground/locales/mas"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -12,7 +13,7 @@ import (
 
 // HandleRequest configura todas as rotas do servidor
 func HandleRequest() *mux.Router {
-	
+
 	// Rota acessível para usuários não autenticados
 	r := mux.NewRouter()
 
@@ -21,8 +22,8 @@ func HandleRequest() *mux.Router {
 	masterRoutes.Use(middlewares.Authorize("master"))
 
 	// Rota acessível apenas para o administrador
-    adminRoutes := r.PathPrefix("/admin").Subrouter()
-    adminRoutes.Use(middlewares.Authorize("admin", "master"))
+	adminRoutes := r.PathPrefix("/admin").Subrouter()
+	adminRoutes.Use(middlewares.Authorize("admin", "master"))
 
 	// Rota acessível para qualquer usuário autênticado (master, admin ou user)
 	anyUserRoutes := r.PathPrefix("/anyUser").Subrouter()

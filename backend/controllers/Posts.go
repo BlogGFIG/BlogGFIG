@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -134,30 +133,27 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetPosts(w http.ResponseWriter, r *http.Request) {
-	// Logando quando a função é chamada
-	fmt.Println("Recebendo requisição para obter postagens")
+	type PostWithUser struct {
+		models.Post
+		UserName string `json:"user_name"`
+	}
 
-	var posts []models.Post
+	var postsWithUsers []PostWithUser
 
-	// Buscando todas as postagens no banco, ordenando primeiro pelos fixados e depois por data de criação
-	result := dataBase.DB.Order("pinned DESC").Order("created_at DESC").Find(&posts)
+	result := dataBase.DB.Table("posts").
+		Select("posts.*, users.name as user_name").
+		Joins("inner join users on users.id = posts.user_id").
+		Order("posts.pinned DESC").
+		Order("posts.created_at DESC").
+		Scan(&postsWithUsers)
+
 	if result.Error != nil {
 		http.Error(w, "Erro ao buscar postagens", http.StatusInternalServerError)
-		fmt.Println("Erro ao buscar postagens:", result.Error)
 		return
 	}
 
-	// Configura o cabeçalho da resposta para JSON
 	w.Header().Set("Content-Type", "application/json")
-
-	// Codifica as postagens em JSON e envia para o front-end
-	if err := json.NewEncoder(w).Encode(posts); err != nil {
-		http.Error(w, "Erro ao codificar postagens", http.StatusInternalServerError)
-		return
-	}
-
-	// Logando sucesso ao enviar a resposta
-	fmt.Println("Postagens enviadas com sucesso")
+	json.NewEncoder(w).Encode(postsWithUsers)
 }
 
 // EditPost: Função para editar uma postagem existente
