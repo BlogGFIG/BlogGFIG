@@ -13,7 +13,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const settings = ['Perfil', 'configurações', 'Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens','Sair'];
+const settings = ['Perfil', 'Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens','Sair'];
 
 function clearCookies() {
   document.cookie.split(";").forEach(function (c) {
@@ -120,9 +120,7 @@ function ResponsiveAppBar() {
                     key={setting}
                     onClick={() => {
                       handleCloseUserMenu();
-                      if (setting === 'configurações') {
-                        navigate('/user/settings');
-                      } else if (setting === 'Sair') {
+                      if (setting === 'Sair') {
                         clearCookies();
                         navigate('/login');
                       } else if (setting === 'Aprovar inscrição') {
