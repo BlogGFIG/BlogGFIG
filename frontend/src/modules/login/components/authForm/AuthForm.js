@@ -8,18 +8,17 @@ import { authService } from '../../../../services/AuthService';
 import { showSucessToast } from '../../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../../shared/components/toasters/ErrorToaster';
 import Cookies from "js-cookie";
+import { useNavigate } from 'react-router-dom';
 
 
 const AuthForm = ({ isSignUp, setIsSignUp }) => {
-
-
   const { register, handleSubmit } = useForm();
+
+  const navigate = useNavigate();
 
   const onSubmit = async (data) => {
     try {
       let response;
-
-      console.log(data.email);
 
       if (isSignUp) {
         response = await authService.post("register", data);
@@ -33,10 +32,19 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
         response = await authService.post("login", data);
 
         if (response.status === 200) {
-          console.log(data.email);
           showSucessToast("Login realizado com sucesso!");
           Cookies.set("email", data.email, { expires: 7 });
-          window.location.href = "localhost:3000/home"; // Redireciona para a página inicial
+
+          // Salva o token no localStorage
+          if (response.data && response.data.token) {
+            localStorage.setItem('token', response.data.token);
+          }
+
+          // Exemplo de como recuperar o token depois:
+          const token = localStorage.getItem('token');
+          console.log("Token JWT salvo no localStorage:", token);
+
+          navigate("/"); // Redireciona para a página inicial
           return;
         }
       }
