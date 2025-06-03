@@ -482,7 +482,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Gere um link de redefinição de senha
-	resetLink := fmt.Sprintf("http://localhost:8000/updatePassword?email=%s&token=%s", passwordReset.Email, token)
+	resetLink := fmt.Sprintf("https://backend-gfig.onrender.com/updatePassword?email=%s&token=%s", passwordReset.Email, token)
 	log.Println("Link de redefinição de senha gerado:", resetLink)
 
 	// Envie o e-mail de redefinição de senha

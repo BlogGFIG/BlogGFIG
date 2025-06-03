@@ -25,7 +25,7 @@ const UserPosts = () => {
   const [postFormDialogOpen, setPostFormDialogOpen] = useState(false); // Estado para controlar o diálogo de criação de postagens
 
   useEffect(() => {
-    fetch("http://localhost:8000/posts")
+    fetch("https://backend-gfig.onrender.com/posts")
       .then((response) => response.json())
       .then((data) => {
         setPosts(data);
@@ -109,7 +109,7 @@ const UserPosts = () => {
 
   const handlePostCreated = () => {
     // Após a criação de um novo post, recarregar a lista de postagens
-    fetch("http://localhost:8000/posts")
+    fetch("https://backend-gfig.onrender.com/posts")
       .then((response) => response.json())
       .then((data) => setPosts(data));
   };
