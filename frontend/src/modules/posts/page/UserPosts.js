@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { authService } from '../../../services/AuthService';
 import PostForm from '../../home/components/PostForm';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
@@ -11,8 +11,21 @@ import {
   DialogActions,
   TextField,
   Button,
-  Snackbar
+  Snackbar,
+  Box,
+  Paper,
+  Typography,
+  InputAdornment,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableSortLabel,
 } from '@mui/material';
+
+import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 
 const UserPosts = () => {
   const [posts, setPosts] = useState([]);
@@ -22,7 +35,14 @@ const UserPosts = () => {
   const [editContent, setEditContent] = useState('');
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [postFormDialogOpen, setPostFormDialogOpen] = useState(false); // Estado para controlar o diálogo de criação de postagens
+  const [postFormDialogOpen, setPostFormDialogOpen] = useState(false);
+
+  // Estado para imagem expandida
+  const [expandedImageSrc, setExpandedImageSrc] = useState(null);
+
+  const [search, setSearch] = useState('');
+  const [orderBy, setOrderBy] = useState('Title');
+  const [order, setOrder] = useState('asc');
 
   useEffect(() => {
     fetch("http://localhost:8000/posts")
@@ -108,59 +128,153 @@ const UserPosts = () => {
   };
 
   const handlePostCreated = () => {
-    // Após a criação de um novo post, recarregar a lista de postagens
     fetch("http://localhost:8000/posts")
       .then((response) => response.json())
       .then((data) => setPosts(data));
   };
 
-  return (
-    <div style={{ padding: '20px' }}>
-      <h2 style={styles.title}>Lista de Postagens</h2>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={() => setPostFormDialogOpen(true)} // Abre o Dialog de criação de post
-        style={styles.addButton}
-      >
-        Adicionar Postagem
-      </Button>
-      {posts.length === 0 ? (
-        <p>Carregando postagens...</p>
-      ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.tableHeader}>Imagem</th>
-              <th style={styles.tableHeader}>Título</th>
-              <th style={styles.tableHeader}>Conteúdo</th>
-              <th style={styles.tableHeader}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.map((post) => (
-              <tr key={post.ID} style={styles.postRow}>
-                <td>
-                  <img
-                    src={`data:image/png;base64,${post.Image}`}
-                    alt="Imagem do post"
-                    style={styles.avatar}
-                  />
-                </td>
-                <td>{post.Title}</td>
-                <td>{post.Content}</td>
-                <td>
-                  <div style={styles.actions}>
-                    <button onClick={() => handleEdit(post.ID)} style={styles.editButton}>Editar</button>
-                    <button onClick={() => handleDelete(post.ID)} style={styles.deleteButton}>Excluir</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
 
+  const filteredAndSortedPosts = useMemo(() => {
+    const filtered = posts.filter(
+      (post) =>
+        post.Title.toLowerCase().includes(search.toLowerCase()) ||
+        post.Content.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return filtered.sort((a, b) => {
+      const aValue = a[orderBy] ? a[orderBy].toString().toLowerCase() : '';
+      const bValue = b[orderBy] ? b[orderBy].toString().toLowerCase() : '';
+
+      if (aValue < bValue) return order === 'asc' ? -1 : 1;
+      if (aValue > bValue) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [posts, search, orderBy, order]);
+
+  return (
+    <Box sx={{ padding: 3, width: '1200px', display: 'flex', flexDirection: 'column', gap: 2, margin: '0 auto', alignItems: 'center' }}>
+      <Button
+        variant="outlined"
+        color="primary"
+        onClick={() => setPostFormDialogOpen(true)}
+        startIcon={<AddIcon />}
+        sx={{
+          mb: 2, alignSelf: 'flex-end',
+          color: '#ffffff',
+          backgroundColor: '#1D252E',
+          borderRadius: '12px', // <- Correto aqui
+          '&:hover': {
+            borderColor: '#1D252E',
+            backgroundColor: '#f5f5f5',
+            color: '#1D252E'
+          }
+        }}
+      >
+        Post
+      </Button>
+      <Paper elevation={3} sx={{ borderRadius: 4, p: 2, width: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Lista de Postagens
+          </Typography>
+
+          <TextField
+            variant="outlined"
+            placeholder="Pesquisar"
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ width: 250, borderRadius: '12px', backgroundColor: 'white' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              sx: { borderRadius: '12px' }
+            }}
+          />
+        </Box>
+
+        {filteredAndSortedPosts.length === 0 ? (
+          <Typography>Sem postagens para mostrar.</Typography>
+        ) : (
+          <Table>
+            <TableHead sx={{ backgroundColor: '#F4F6F8' }}>
+              <TableRow>
+                <TableCell>Imagem</TableCell>
+
+                <TableCell sortDirection={orderBy === 'Title' ? order : false}>
+                  <TableSortLabel
+                    active={orderBy === 'Title'}
+                    direction={orderBy === 'Title' ? order : 'asc'}
+                    onClick={() => handleRequestSort('Title')}
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    Título
+                  </TableSortLabel>
+                </TableCell>
+
+                <TableCell sortDirection={orderBy === 'Content' ? order : false}>
+                  <TableSortLabel
+                    active={orderBy === 'Content'}
+                    direction={orderBy === 'Content' ? order : 'asc'}
+                    onClick={() => handleRequestSort('Content')}
+                  >
+                    Conteúdo
+                  </TableSortLabel>
+                </TableCell>
+
+                <TableCell>Ações</TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {filteredAndSortedPosts.map((post) => (
+                <TableRow key={post.ID} hover>
+                  <TableCell>
+                    <img
+                      src={`data:image/png;base64,${post.Image}`}
+                      alt="Imagem do post"
+                      style={{ width: 50, height: 50, borderRadius: 12, objectFit: 'cover', cursor: 'pointer' }}
+                      onClick={() => setExpandedImageSrc(`data:image/png;base64,${post.Image}`)}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>{post.Title}</TableCell>
+                  <TableCell>{post.Content}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        size="small"
+                        onClick={() => handleEdit(post.ID)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => handleDelete(post.ID)}
+                      >
+                        Excluir
+                      </Button>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Paper>
+
+      {/* Dialog para criação do post */}
       <Dialog open={postFormDialogOpen} onClose={() => setPostFormDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Adicionar Postagem</DialogTitle>
         <DialogContent>
@@ -171,33 +285,63 @@ const UserPosts = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+      {/* Dialog para edição do post */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Editar Postagem</DialogTitle>
         <DialogContent>
           <TextField
+            autoFocus
             margin="dense"
             label="Título"
+            type="text"
             fullWidth
-            variant="outlined"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
           />
           <TextField
             margin="dense"
             label="Conteúdo"
+            type="text"
             fullWidth
             multiline
-            minRows={4}
-            variant="outlined"
+            minRows={3}
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            sx={{ marginTop: 2 }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)} color="secondary">Cancelar</Button>
-          <Button onClick={handleSaveEditPost}>Salvar</Button>
+          <Button onClick={() => setEditDialogOpen(false)} color="secondary">
+            Cancelar
+          </Button>
+          <Button onClick={handleSaveEditPost} variant="contained" color="primary">
+            Salvar
+          </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Dialog para imagem expandida */}
+      <Dialog
+        open={Boolean(expandedImageSrc)}
+        onClose={() => setExpandedImageSrc(null)}
+        maxWidth="lg"
+        PaperProps={{
+          style: { backgroundColor: 'transparent', boxShadow: 'none' },
+        }}
+      >
+        <img
+          src={expandedImageSrc}
+          alt="Imagem ampliada"
+          style={{
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            borderRadius: 12,
+            display: 'block',
+            margin: 'auto',
+          }}
+        />
+        <Box sx={{ textAlign: 'center', mt: 1 }}>
+          <Button variant="outlined" onClick={() => setExpandedImageSrc(null)}>Fechar</Button>
+        </Box>
       </Dialog>
 
       <Snackbar
@@ -206,63 +350,8 @@ const UserPosts = () => {
         onClose={() => setSnackbarOpen(false)}
         message={snackbarMessage}
       />
-    </div>
+    </Box>
   );
-};
-
-
-const styles = {
-  title: {
-    textAlign: 'left',
-    marginBottom: '10px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: '20px',
-  },
-  tableHeader: {
-    textAlign: 'left',
-    padding: '8px',
-    backgroundColor: '#f4f4f4',
-  },
-  postRow: {
-    borderBottom: '1px solid #ddd',
-  },
-  avatar: {
-    width: "40px",
-    height: "40px",
-    borderRadius: "50%",
-  },
-  status: {
-    padding: '5px 10px',
-    borderRadius: '5px',
-    color: '#fff',
-    fontSize: '12px',
-  },
-  actions: {
-    display: 'flex',
-    gap: '10px',
-  },
-  editButton: {
-    padding: '5px 10px',
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-  },
-  deleteButton: {
-    padding: '5px 10px',
-    backgroundColor: '#f44336',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-  },
-  addButton: {
-    marginBottom: '20px',
-  }
 };
 
 export default UserPosts;

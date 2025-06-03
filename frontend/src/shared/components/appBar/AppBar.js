@@ -13,12 +13,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-<<<<<<< HEAD
-const pages = ['Products', 'Pricing', 'Blog'];
 const settings = ['Perfil', 'configurações', 'Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens','Sair'];
-=======
-const settings = ['Perfil', 'configurações', 'Aprovar inscrição', 'Alterar níveis de permissão', 'Sair'];
->>>>>>> 794288c (css)
 
 function clearCookies() {
   document.cookie.split(";").forEach(function (c) {

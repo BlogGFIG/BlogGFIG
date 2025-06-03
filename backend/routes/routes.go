@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"net/http"
 	"os"
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
@@ -12,7 +13,7 @@ import (
 )
 
 // HandleRequest configura todas as rotas do servidor
-func HandleRequest() *mux.Router {
+func HandleRequest() http.Handler {
 
 	// Rota acessível para usuários não autenticados
 	r := mux.NewRouter()
@@ -107,5 +108,5 @@ func HandleRequest() *mux.Router {
 		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
 	)
 
-	return corsHandler(r).(*mux.Router) // Retorna o roteador com CORS configurado para o main
+	return corsHandler(r) // Retorna o roteador com CORS configurado para o main
 }

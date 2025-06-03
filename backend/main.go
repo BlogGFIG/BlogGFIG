@@ -16,7 +16,7 @@ func main() {
 	// Use a variável de ambiente PORT
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8000"
 	}
 
 	log.Printf("Servidor escutando na porta %s", port)
