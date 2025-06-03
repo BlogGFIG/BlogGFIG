@@ -274,16 +274,18 @@ const UserPosts = () => {
         )}
       </Paper>
 
-      {/* Dialog para criação do post */}
-      <Dialog open={postFormDialogOpen} onClose={() => setPostFormDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Adicionar Postagem</DialogTitle>
-        <DialogContent>
+      <Dialog
+        open={postFormDialogOpen}
+        onClose={() => setPostFormDialogOpen(false)}
+        maxWidth="sm" // Menor que "md"
+        fullWidth={false} // Pode remover o fullWidth se quiser menos largura
+        sx={{ '& .MuiPaper-root': { borderRadius: '12px' } }} // arredondamento
+      >
+        <DialogContent sx={{ borderRadius: '12px' }}>
           <PostForm onPostCreated={handlePostCreated} />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPostFormDialogOpen(false)} color="secondary">Cancelar</Button>
-        </DialogActions>
       </Dialog>
+
 
       {/* Dialog para edição do post */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>

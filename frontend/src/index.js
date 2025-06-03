@@ -14,7 +14,7 @@ const AppWrapper = () => {
   const isLoginPage = location.pathname === '/login';
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative', marginTop: '64px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '90vh', position: 'relative', marginTop: '64px' }}>
       {!isLoginPage && <AppBar />}
       <Routers />
     </Box>
