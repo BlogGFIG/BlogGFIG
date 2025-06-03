@@ -2,7 +2,6 @@ package routes
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/BlogGFIG/BlogGFIG/middlewares"
@@ -100,8 +99,8 @@ func HandleRequest() http.Handler {
 	corsHandler := handlers.CORS(
 		// Permite a origem específica, e permite credenciais (cookies, cabeçalhos)
 		handlers.AllowedOrigins([]string{
-			os.Getenv("FRONTEND_ORIGIN"), // ex: https://meu-frontend.onrender.com - Render
-			"http://localhost:3000",      // para testes locais
+			"https://frontend-gfig.onrender.com", // ex: https://meu-frontend.onrender.com - Render
+			"http://localhost:3000",              // para testes locais
 		}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
