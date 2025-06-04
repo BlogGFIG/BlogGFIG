@@ -57,6 +57,9 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if commentRequest.UserEmail == "" {
 		commentRequest.UserEmail = userEmail
+		if commentRequest.UserEmail == "" {
+			commentRequest.UserEmail = "Anônimo"
+		}
 	}
 
 	// Criação do comentário

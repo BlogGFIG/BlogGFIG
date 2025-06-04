@@ -234,18 +234,19 @@ const Feed = () => {
     const newComment = newComments[postId];
     if (!newComment) return;
 
-    const email = getEmailFromToken();
-    if (!email) return;
+    // Permite comentários anônimos
+    const email = getEmailFromToken() || "Anônimo";
+    const userName = getUserNameFromToken() || "Anônimo";
 
     try {
       await authService.post('create-comment', {
         postId,
         content: newComment,
-        userName: getUserNameFromToken(), // Deve retornar "ADMIN"
-        userEmail: getEmailFromToken(),
+        userName,
+        userEmail: email,
       });
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
-      await fetchComments(postId, { current: true }); // Força fetch sem desmontagem
+      await fetchComments(postId, { current: true });
     } catch (error) {
       if (
         error.response &&
