@@ -13,9 +13,9 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const masterSettings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Sair'];
-const adminSettings = ['Aprovar inscrição', 'Gerenciar postagens', 'Sair'];
-const userSettings = ['Sair'];
+const masterSettings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Configurações', 'Sair'];
+const adminSettings = ['Aprovar inscrição', 'Gerenciar postagens', 'Configurações', 'Sair'];
+const userSettings = ['Configurações', 'Sair'];
 const unauthenticatedSettings = ['Entrar'];
 
 function ResponsiveAppBar() {
@@ -149,6 +149,8 @@ function ResponsiveAppBar() {
                         navigate('/UserList');
                       } else if (setting === 'Gerenciar postagens') {
                         navigate('/user/posts');
+                      } else if (setting === 'Configurações') {
+                        navigate('/user/settings');
                       }
                     }}
                   >
