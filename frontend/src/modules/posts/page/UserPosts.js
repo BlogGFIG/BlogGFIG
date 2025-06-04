@@ -86,7 +86,7 @@ const UserPosts = () => {
     if (window.confirm("Tem certeza que deseja excluir esta postagem?")) {
       const email = getEmailFromToken();
 
-      authService.delete(`delete-post?post_id=${postID}&email=${email}`)
+      authService.delete(`anyUser/delete-post?post_id=${postID}&email=${email}`)
         .then((response) => {
           console.log("Postagem deletada:", response);
           setPosts(posts.filter((post) => post.ID !== postID));
