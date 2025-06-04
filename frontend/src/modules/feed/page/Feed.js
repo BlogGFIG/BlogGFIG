@@ -237,7 +237,7 @@ const Feed = () => {
     if (!email) return;
 
     try {
-      const endpoint = selectedPost.Pinned ? '/unpin-post' : '/pin-post';
+      const endpoint = selectedPost.Pinned ? '/anyUser/unpin-post' : '/anyUser/pin-post';
       await authService.put(endpoint, {
         postId: selectedPost.ID,
         email: email,
@@ -249,8 +249,16 @@ const Feed = () => {
       setSnackbarOpen(true);
       await fetchPosts({ current: true });
     } catch (error) {
-      setSnackbarMessage('Erro ao alterar fixação da postagem.');
-      setSnackbarOpen(true);
+      // Verifica se o erro é de permissão
+      if (
+        error.response &&
+        (error.response.status === 403 || error.response.status === 401)
+      ) {
+        showErrorToast('Você não tem permissão para fixar esta postagem.');
+      } else {
+        setSnackbarMessage('Erro ao alterar fixação da postagem.');
+        setSnackbarOpen(true);
+      }
     } finally {
       handleCloseMenu();
     }
@@ -410,9 +418,11 @@ const Feed = () => {
 
                   <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
                     {post.Pinned && <PushPinIcon fontSize="small" color="primary" sx={{ marginRight: '8px' }} />}
-                    <IconButton onClick={(e) => handleClickMenu(e, post)}>
-                      <MoreVertIcon />
-                    </IconButton>
+                    {localStorage.getItem('token') && (
+                      <IconButton onClick={(e) => handleClickMenu(e, post)}>
+                        <MoreVertIcon />
+                      </IconButton>
+                    )}
                   </Box>
                 </Box>
 
