@@ -166,23 +166,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extrai o tipo de usuário do token JWT
-	userType := ""
-	authHeader := r.Header.Get("Authorization")
-	if authHeader != "" {
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte("bloggfig@2025"), nil
-		})
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			if t, ok := claims["userType"].(string); ok {
-				if userType == "" {
-					userType = t
-				}
-			}
-		}
-	}
-
 	// Permite editar comentários anônimos apenas para admin/master
 	if comment.UserEmail == "Anônimo" {
 		http.Error(w, "Comentários anônimos só podem ser excluídos", http.StatusForbidden)
