@@ -286,12 +286,15 @@ const UserPosts = () => {
       <Dialog
         open={postFormDialogOpen}
         onClose={() => setPostFormDialogOpen(false)}
-        maxWidth="sm" // Menor que "md"
-        fullWidth={false} // Pode remover o fullWidth se quiser menos largura
-        sx={{ '& .MuiPaper-root': { borderRadius: '12px' } }} // arredondamento
+        maxWidth="sm"
+        fullWidth={false}
+        sx={{ '& .MuiPaper-root': { borderRadius: '12px' } }}
       >
         <DialogContent sx={{ borderRadius: '12px' }}>
-          <PostForm onPostCreated={handlePostCreated} />
+          <PostForm
+            onPostCreated={handlePostCreated}
+            onClose={() => setPostFormDialogOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
