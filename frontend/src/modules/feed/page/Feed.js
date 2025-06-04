@@ -194,7 +194,16 @@ const Feed = () => {
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
       await fetchComments(postId, { current: true }); // Força fetch sem desmontagem
     } catch (error) {
-      console.error("Erro ao criar comentário:", error);
+      if (
+        error.response &&
+        error.response.status === 400 &&
+        error.response.data &&
+        error.response.data.includes('palavras proibidas')
+      ) {
+        showErrorToast('Seu comentário contém palavras proibidas!');
+      } else {
+        showErrorToast('Erro ao criar comentário.');
+      }
     }
   };
 
