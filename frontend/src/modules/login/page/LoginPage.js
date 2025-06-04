@@ -44,7 +44,7 @@ const LoginPage = () => {
                         onClick={() => setIsSignUp(!isSignUp)}
                         style={{ color: '#1C252E', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                        {isSignUp ? 'entrar' : 'cadastre-se'}
+                        {isSignUp ? 'Entrar' : 'Cadastre-se'}
                     </span>
                 </Typography>
 
