@@ -11,7 +11,7 @@ import { showSucessToast } from '../../../shared/components/toasters/SucessToast
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 
 const Feed = () => {
@@ -150,6 +150,24 @@ const Feed = () => {
     }
   };
 
+  const getUserRoleFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      // Tenta diferentes campos possíveis
+      return (
+        decoded.user_type ||
+        decoded.userType ||
+        decoded.role ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  };
+  const loggedUserRole = getUserRoleFromToken();
+
   const fetchPosts = async (isMountedRef) => {
     setLoading(true);
     setError(null);
@@ -236,6 +254,9 @@ const Feed = () => {
     const email = getEmailFromToken();
     if (!email) return;
 
+    // FECHA O MENU ANTES DE ATUALIZAR OS POSTS
+    handleCloseMenu();
+
     try {
       const endpoint = selectedPost.Pinned ? '/anyUser/unpin-post' : '/anyUser/pin-post';
       await authService.put(endpoint, {
@@ -249,7 +270,6 @@ const Feed = () => {
       setSnackbarOpen(true);
       await fetchPosts({ current: true });
     } catch (error) {
-      // Verifica se o erro é de permissão
       if (
         error.response &&
         (error.response.status === 403 || error.response.status === 401)
@@ -259,8 +279,6 @@ const Feed = () => {
         setSnackbarMessage('Erro ao alterar fixação da postagem.');
         setSnackbarOpen(true);
       }
-    } finally {
-      handleCloseMenu();
     }
   };
 
@@ -373,6 +391,8 @@ const Feed = () => {
     }
   }, [selectedPost]);
 
+  console.log('Tipo do usuário logado:', loggedUserRole);
+
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px', width: '100%' }}>
       <Box sx={{ width: '100%' }}>
@@ -418,7 +438,7 @@ const Feed = () => {
 
                   <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
                     {post.Pinned && <PushPinIcon fontSize="small" color="primary" sx={{ marginRight: '8px' }} />}
-                    {localStorage.getItem('token') && (
+                    {['admin', 'master'].includes(loggedUserRole) && (
                       <IconButton onClick={(e) => handleClickMenu(e, post)}>
                         <MoreVertIcon />
                       </IconButton>
@@ -633,17 +653,19 @@ const Feed = () => {
         ) : (
           <div>Não há postagens disponíveis.</div>
         )}
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
-          <MenuItem onClick={handleToggleFixPost}>
-            {selectedPost?.Pinned ? 'Desfixar postagem' : 'Fixar postagem'}
-          </MenuItem>
-          <MenuItem onClick={handleEditPost}>
-            Editar postagem
-          </MenuItem>
-          <MenuItem onClick={handleDeletePost}>
-            Deletar postagem
-          </MenuItem>
-        </Menu>
+        {['admin', 'master'].includes(loggedUserRole) && (
+          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
+            <MenuItem onClick={handleToggleFixPost}>
+              {selectedPost?.Pinned ? 'Desfixar postagem' : 'Fixar postagem'}
+            </MenuItem>
+            <MenuItem onClick={handleEditPost}>
+              Editar postagem
+            </MenuItem>
+            <MenuItem onClick={handleDeletePost}>
+              Deletar postagem
+            </MenuItem>
+          </Menu>
+        )}
 
         <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
           <DialogTitle>Editar Postagem</DialogTitle>
