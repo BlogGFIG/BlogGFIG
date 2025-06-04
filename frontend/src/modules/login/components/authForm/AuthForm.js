@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material'; // Adicionei Typography para mensagens
+import { Box } from '@mui/system';
 import TextInput from '../../../../shared/components/inputs/TextInput';
 import PasswordInput from '../../../../shared/components/inputs/PasswordInput';
 import SubmitButton from '../../../../shared/components/buttons/SubmitButton';
@@ -14,7 +14,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
     register, 
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm();
 
   const navigate = useNavigate();
@@ -54,92 +54,100 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
       console.error("Erro na autenticação:", error);
 
       if (!error.response) {
-        showErrorToast("Erro de rede. Verifique sua conexão e tente novamente.");
+        showErrorToast("Erro de rede. Tente novamente.");
         return;
       }
 
       const { status } = error.response;
 
       if (status === 409) {
-        showErrorToast("Este e-mail já está cadastrado. Faça login ou use outro e-mail.");
+        showErrorToast("Este e-mail já está cadastrado.");
       } else if (status === 401) {
-        showErrorToast("Credenciais inválidas. Verifique seu e-mail e senha.");
+        showErrorToast("Usuário ou senha incorretos.");
       } else if (status === 403) {
-        showErrorToast("Acesso não autorizado. Sua conta pode estar inativa.");
+        showErrorToast("Usuário inativo ou não aprovado.");
       } else {
-        showErrorToast("Ocorreu um erro inesperado. Tente novamente mais tarde.");
+        showErrorToast("Erro ao autenticar.");
       }
     }
   };
-
-  // Expressão regular para validar senha forte
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/;
-
+  
   return (
     <form sx={{padding: '0' }} onSubmit={handleSubmit(onSubmit)}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', padding: '0' }}>
 
         <TextInput
           id={'email'}
-          type={'email'}
           label={'E-mail'}
+          type={'email'}
           register={register}
+          required={true}
+          error={!!errors.email}
+          helperText={errors.email?.message}
           sx={{ width: '100%' }}
+          {...register("email", { 
+            required: "E-mail é obrigatório",
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: "E-mail inválido"
+            }
+          })}
         />
 
         <PasswordInput
           id={'password'}
-          type={'password'}
           label={'Senha'}
+          type={'password'}
           register={register}
+          required={true}
+          error={!!errors.password}
+          helperText={errors.password?.message}
           sx={{ width: '100%' }}
+          {...register("password", { 
+            required: "Senha é obrigatória"
+            }
+          )}
         />
 
         {isSignUp && (
           <>
             <PasswordInput
               id={'passwordConfirmation'}
-              type={'password'}
               label={'Confirmar senha'}
+              type={'password'}
               register={register}
+              required={true}
+              error={!!errors.passwordConfirmation}
+              helperText={errors.passwordConfirmation?.message}
               sx={{ width: '100%' }}
+              {...register("passwordConfirmation", { 
+                required: "Confirmação de senha é obrigatória",
+                validate: value => 
+                  value === password || "As senhas não coincidem"
+              })}
             />
 
             <TextInput
               id={'name'}
-              type={'name'}
               label={'Nome'}
+              type={'name'}
               register={register}
+              required={true}
+              error={!!errors.name}
+              helperText={errors.name?.message}
               sx={{ width: '100%' }}
+              {...register("name", { 
+                required: "Nome é obrigatório",
+                minLength: {
+                  value: 2,
+                  message: "Nome deve ter pelo menos 2 caracteres"
+                }
+              })}
             />
           </>
         )}
 
-        {/* Botão de submit com estado de loading */}
-        <SubmitButton 
-          text={isSignUp ? 'Cadastrar' : 'Login'} 
-          disabled={isSubmitting}
-          sx={{ mt: 2 }}
-        />
-
-        {/* Mensagem de rodapé */}
-        <Typography variant="body2" sx={{ 
-          color: 'text.secondary', 
-          mt: 2,
-          textAlign: 'center'
-        }}>
-          {isSignUp ? 'Já tem uma conta? ' : 'Ainda não tem uma conta? '}
-          <span 
-            onClick={() => setIsSignUp(!isSignUp)}
-            style={{ 
-              color: '#1976d2', 
-              cursor: 'pointer',
-              textDecoration: 'underline'
-            }}
-          >
-            {isSignUp ? 'Faça login' : 'Cadastre-se'}
-          </span>
-        </Typography>
+        <SubmitButton text={isSignUp ? 'Cadastrar' : 'Login'} />
       </Box>
     </form>
   );
