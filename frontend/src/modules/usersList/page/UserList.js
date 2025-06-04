@@ -114,7 +114,7 @@ const UserList = () => {
 
     const token = localStorage.getItem('token');
 
-    axios.put("http://localhost:8000/admin/updateUserRole", payload, {
+    axios.put("http://localhost:8000/master/updateUserRole", payload, {
       headers: {
         Authorization: `Bearer ${token}`
       }
