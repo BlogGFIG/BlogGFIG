@@ -175,6 +175,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"userId": existingUser.ID,
 		"role":   existingUser.UserType,
 		"email":  existingUser.Email,
+		"name":   existingUser.Name,
 		"exp":    time.Now().Add(time.Hour * 24).Unix(), // Expira em 24 horas
 	})
 

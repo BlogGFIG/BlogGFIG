@@ -13,6 +13,16 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { jwtDecode } from 'jwt-decode';
 
+const token = localStorage.getItem('token');
+if (token) {
+  try {
+    const decoded = jwtDecode(token);
+  } catch (e) {
+    console.log('Erro ao decodificar o token:', e);
+  }
+} else {
+  console.log('Nenhum token encontrado no localStorage.');
+}
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
@@ -53,7 +63,6 @@ const Feed = () => {
 
     try {
       const currentUserEmail = getEmailFromToken();
-      console.log("E-mail do usuário:", currentUserEmail);
 
       console.log("Enviando requisição PUT para editar comentário:", {
         commentId: selectedCommentId,
@@ -150,6 +159,18 @@ const Feed = () => {
     }
   };
 
+  const getUserNameFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      // Ajuste o campo conforme o payload do seu JWT
+      return decoded.name || decoded.user_name || decoded.nome || null;
+    } catch {
+      return null;
+    }
+  };
+
   const getUserRoleFromToken = () => {
     const token = localStorage.getItem('token');
     if (!token) return null;
@@ -173,9 +194,6 @@ const Feed = () => {
     setError(null);
     try {
       const response = await authService.get("posts");
-
-      // Adicione o console.log aqui para ver a resposta inteira:
-      console.log('fetchPosts response:', response);
 
       if (response.data && isMountedRef.current) {
         setPosts(response.data);
@@ -220,7 +238,12 @@ const Feed = () => {
     if (!email) return;
 
     try {
-      await authService.post('create-comment', { postId, content: newComment, userEmail: email });
+      await authService.post('create-comment', {
+        postId,
+        content: newComment,
+        userName: getUserNameFromToken(), // Deve retornar "ADMIN"
+        userEmail: getEmailFromToken(),
+      });
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
       await fetchComments(postId, { current: true }); // Força fetch sem desmontagem
     } catch (error) {
@@ -391,8 +414,6 @@ const Feed = () => {
     }
   }, [selectedPost]);
 
-  console.log('Tipo do usuário logado:', loggedUserRole);
-
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px', width: '100%' }}>
       <Box sx={{ width: '100%' }}>
@@ -492,16 +513,16 @@ const Feed = () => {
                               {/* Lado esquerdo: avatar + conteúdo do comentário */}
                               <Box sx={{ display: 'flex', flex: 1, gap: '12px' }}>
                                 <Avatar sx={{ width: 40, height: 40 }}>
-                                  {comment.userName?.[0]?.toUpperCase() || 'A'}
+                                  {(comment.userName || comment.user_name || 'A')[0]?.toUpperCase()}
                                 </Avatar>
 
                                 <Box>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Typography variant="subtitle2" fontWeight="bold">
-                                      {comment.userName || 'Anônimo'}
+                                      {comment.userName || comment.user_name || 'Anônimo'}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                                      {comment.date || '01/01/2023'}
+                                      {comment.date ? new Date(comment.date).toLocaleString('pt-BR') : '01/01/2023'}
                                     </Typography>
                                   </Box>
 

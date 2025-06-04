@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
 	"github.com/BlogGFIG/BlogGFIG/utils"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
@@ -17,6 +19,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	var commentRequest struct {
 		Content   string `json:"content"`
 		PostID    uint   `json:"postId"`
+		UserName  string `json:"userName"`
 		UserEmail string `json:"userEmail"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&commentRequest)
@@ -31,46 +34,43 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verifica se o e-mail foi passado, se não, define como "Anônimo"
-	if commentRequest.UserEmail == "" {
-		commentRequest.UserEmail = "Anônimo"
-	}
-
-	// Log para verificar o e-mail recebido
-	fmt.Println("E-mail recebido:", commentRequest.UserEmail)
-
-	// Buscando o usuário pelo e-mail, se o e-mail não for "Anônimo"
-	var user models.User
-	if commentRequest.UserEmail != "Anônimo" {
-		result := dataBase.DB.Where("email = ?", commentRequest.UserEmail).First(&user)
-		if result.Error != nil {
-			if result.Error == gorm.ErrRecordNotFound {
-				http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-				fmt.Println("Usuário não encontrado para o e-mail:", commentRequest.UserEmail)
-				return
+	// Extrai o nome do usuário do token JWT
+	userName := "Anônimo"
+	userEmail := ""
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" {
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte("bloggfig@2025"), nil // Use sua chave secreta
+		})
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			if name, ok := claims["name"].(string); ok && name != "" {
+				userName = name
 			}
-			http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-			fmt.Println("Erro ao buscar usuário:", result.Error)
-			return
+			if email, ok := claims["email"].(string); ok && email != "" {
+				userEmail = email
+			}
 		}
-
-		// Log para confirmar que o usuário foi encontrado
-		fmt.Println("Usuário encontrado:", user.Email)
+	}
+	if commentRequest.UserName == "" {
+		commentRequest.UserName = userName
+	}
+	if commentRequest.UserEmail == "" {
+		commentRequest.UserEmail = userEmail
 	}
 
 	// Criação do comentário
 	comment := models.Comment{
 		Content:   commentRequest.Content,
 		PostID:    commentRequest.PostID,
-		UserID:    user.ID,                  // Associando o UserID ao comentário
-		UserEmail: commentRequest.UserEmail, // Preenchendo o campo user_email com o e-mail do usuário
+		UserName:  commentRequest.UserName,
+		UserEmail: commentRequest.UserEmail,
 	}
 
 	// Inserindo no banco
 	result := dataBase.DB.Create(&comment)
 	if result.Error != nil {
 		http.Error(w, "Erro ao salvar comentário", http.StatusInternalServerError)
-		fmt.Println("Erro ao salvar comentário:", result.Error)
 		return
 	}
 
@@ -104,20 +104,22 @@ func ListComments(w http.ResponseWriter, r *http.Request) {
 		Content   string `json:"content"`
 		UserEmail string `json:"user_email"`
 		UserName  string `json:"user_name"`
+		Date      string `json:"date"`
 	}
 
 	var response []CommentResponse
 	for _, comment := range comments {
-		userName := comment.User.Name
-		if userName == "" || comment.UserEmail == "Anônimo" {
-			userName = "Anônimo"
+		UserName := comment.UserName
+		if UserName == "" {
+			UserName = "Anônimo"
 		}
 
 		response = append(response, CommentResponse{
 			ID:        comment.ID,
 			Content:   comment.Content,
 			UserEmail: comment.UserEmail,
-			UserName:  userName,
+			UserName:  UserName,
+			Date:      comment.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 
