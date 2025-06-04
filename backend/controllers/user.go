@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
@@ -59,13 +60,37 @@ func ApproveOrRejectUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Pega o email do moderador a partir do cookie
-	cookie, err := r.Cookie("email")
-	if err != nil {
-		http.Error(w, "Email do moderador não encontrado nos cookies", http.StatusUnauthorized)
+	// NOVO: Pega o token do header Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
 		return
 	}
-	emailModerador := cookie.Value
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		http.Error(w, "Formato do token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	// NOVO: Decodifica o token JWT para pegar o e-mail do moderador
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte("bloggfig@2025"), nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Não foi possível extrair claims do token", http.StatusUnauthorized)
+		return
+	}
+	emailModerador, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusUnauthorized)
+		return
+	}
 
 	// Estrutura para capturar os dados enviados pelo frontend
 	var requestData struct {

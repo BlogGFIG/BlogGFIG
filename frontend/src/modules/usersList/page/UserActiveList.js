@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Cookies from 'js-cookie';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import {
   Box,
   Button,
@@ -27,9 +28,34 @@ const UserActiveList = () => {
   const [search, setSearch] = useState('');
   const [orderBy, setOrderBy] = useState('name');
   const [order, setOrder] = useState('asc');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get("http://localhost:8000/users")
+    // Verifica o tipo de usuário pelo token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    try {
+      const decoded = jwtDecode(token);
+      console.log('Token decodificado:', decoded); // Veja todos os campos do token
+      const userType = decoded.role; // <-- ALTERADO para 'role'
+      console.log('User type extraído do token:', userType);
+      if (userType !== 'admin' && userType !== 'master') {
+        navigate('/');
+        return;
+      }
+    } catch (e) {
+      navigate('/login');
+      return;
+    }
+
+    axios.get("http://localhost:8000/admin/users", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then(response => {
         const pendingUsers = response.data.filter(user => user.user_type === 'pending');
         setUsers(pendingUsers);
@@ -39,26 +65,33 @@ const UserActiveList = () => {
         console.error("Erro ao buscar usuários:", error);
         setLoading(false);
       });
-  }, []);
+  }, [navigate]);
 
   const handleUserApproval = (userId, decision) => {
-    const requesterEmail = Cookies.get('email');
-    if (!requesterEmail) {
-      alert('E-mail do usuário não encontrado nos cookies.');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Token não encontrado. Faça login novamente.');
+      navigate('/login');
       return;
     }
 
     const newUserType = decision === 'approve' ? 'user' : 'reproved';
 
     const payload = {
-      requester_email: requesterEmail,
       id: userId,
       role: newUserType
     };
 
-    axios.put("http://localhost:8000/approveOrRejectUser", payload, { withCredentials: true })
+    axios.put("http://localhost:8000/admin/approveOrRejectUser", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then(() => setUsers(users.filter(user => user.id !== userId)))
-      .catch(error => console.error("Erro ao atualizar tipo de usuário:", error));
+      .catch(error => {
+        console.error("Erro ao atualizar tipo de usuário:", error);
+        alert("Erro ao atualizar tipo de usuário.");
+      });
   };
 
   const handleSort = (property) => {
