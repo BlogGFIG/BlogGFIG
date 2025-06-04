@@ -4,22 +4,62 @@ import Cookies from 'js-cookie';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Select, MenuItem, FormControl, InputLabel, Paper, Box } from '@mui/material';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
+import { jwtDecode } from "jwt-decode";
+import { useNavigate } from 'react-router-dom';
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get("http://localhost:8000/users")
-      .then(response => {
-        setUsers(response.data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error("Erro ao buscar usuários:", error);
-        setLoading(false);
-      });
+    // Extrai a role do token
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserRole(decoded.role);
+        console.log("Role do usuário:", decoded.role);
+      } catch (e) {
+        setUserRole(null);
+        console.error("Token inválido:", e);
+      }
+    } else {
+      setUserRole(null);
+    }
   }, []);
+
+  useEffect(() => {
+    if (userRole === "admin" || userRole === "master") {
+      const token = localStorage.getItem('token');
+      axios.get("http://localhost:8000/admin/users", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+        .then(response => {
+          console.log("Dados recebidos do backend:", response.data);
+          setUsers(response.data);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error("Erro ao buscar usuários:", error);
+          setLoading(false);
+        });
+    }
+  }, [userRole]);
+
+  // Bloqueia acesso se não for admin ou master
+  if (userRole !== "admin" && userRole !== "master") {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <h2>Acesso negado</h2>
+        <p>Você não tem permissão para acessar esta página.</p>
+        <Button variant="contained" onClick={() => navigate('/')}>Voltar para Home</Button>
+      </Box>
+    );
+  }
 
   const handleToggleUserStatus = (userId, currentStatus) => {
     const requesterEmail = Cookies.get('email');
@@ -35,8 +75,12 @@ const UserList = () => {
       requester_email: requesterEmail,
     };
 
-    axios.put("http://localhost:8000/toggleUserStatus", payload, {
-      withCredentials: true
+    const token = localStorage.getItem('token');
+
+    axios.put("http://localhost:8000/admin/ativarOuInativar", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
       .then(() => {
         setUsers(users.map(user =>
@@ -68,13 +112,19 @@ const UserList = () => {
       requester_email: requesterEmail
     };
 
-    axios.put("http://localhost:8000/updateUserRole", payload, { withCredentials: true })
+    const token = localStorage.getItem('token');
+
+    axios.put("http://localhost:8000/admin/updateUserRole", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then(() => {
         // Exibe o toast de sucesso
         showSucessToast("Nível de usuário atualizado com sucesso!");
 
         // Recarregar os dados após salvar
-        axios.get("http://localhost:8000/users")
+        axios.get("http://localhost:8000/admin/users")
           .then(response => {
             setUsers(response.data); // Atualiza o estado com os dados mais recentes
           })
@@ -91,22 +141,8 @@ const UserList = () => {
 
   if (loading) return <div>Carregando...</div>;
 
-  // Filtra os usuários para mostrar apenas "admin", "user" e "master"
-  const filteredUsers = users.filter(user => 
-    ["admin", "user", "master"].includes(user.user_type)
-  );
-
-  // Separa os usuários ativos dos inativos
-  const activeUsers = filteredUsers.filter(user => user.status === "ativo");
-  const inactiveUsers = filteredUsers.filter(user => user.status === "inativo");
-
-  // Prioriza os "master" no topo, depois ordena os outros por nome
-  const sortedUsers = [
-    ...activeUsers.filter(user => user.user_type === "master"),
-    ...activeUsers.filter(user => user.user_type !== "master"),
-    ...inactiveUsers.filter(user => user.user_type === "master"),
-    ...inactiveUsers.filter(user => user.user_type !== "master")
-  ];
+  // Não filtra por status, pois não existe esse campo
+  const sortedUsers = users;
 
   return (
     <Box sx={{ width: '98%', overflowX: 'auto', padding: 2 }}>
@@ -117,35 +153,15 @@ const UserList = () => {
               <TableRow sx={{ backgroundColor: '#3f51b5' }}>
                 <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Nome do Usuário</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Endereço de E-mail</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Status do Usuário</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Tipo de Usuário</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Ação</TableCell>
               </TableRow>
             </TableHead>
-
             <TableBody>
               {sortedUsers.map(user => (
                 <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
                   <TableCell sx={{ wordBreak: 'break-word' }}>{user.name}</TableCell>
                   <TableCell sx={{ wordBreak: 'break-word' }}>{user.email}</TableCell>
-                  <TableCell>
-                    {user.status === "ativo" ? "Ativo" : "Inativo"}
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={() => handleToggleUserStatus(user.id, user.status)}
-                      sx={{
-                        marginLeft: 1,
-                        minWidth: '80px',
-                        backgroundColor: user.status === "ativo" ? '#d32f2f' : '#388e3c',
-                        '&:hover': {
-                          backgroundColor: user.status === "ativo" ? '#b71c1c' : '#2e7d32',
-                        },
-                      }}
-                    >
-                      {user.status === "ativo" ? "Inativar" : "Ativar"}
-                    </Button>
-                  </TableCell>
                   <TableCell>
                     <FormControl fullWidth>
                       <InputLabel>Nível</InputLabel>
@@ -165,7 +181,7 @@ const UserList = () => {
                       size="small"
                       variant="contained"
                       color="primary"
-                      onClick={() => handleSaveUserRole(user.id, user.user_type)} // Salva a role
+                      onClick={() => handleSaveUserRole(user.id, user.user_type)}
                       sx={{ marginLeft: 1 }}
                     >
                       Salvar
@@ -174,12 +190,9 @@ const UserList = () => {
                 </TableRow>
               ))}
             </TableBody>
-
           </Table>
         </TableContainer>
       </Paper>
-
-      {/* Estilo opcional para remover scroll lateral da página */}
       <style>
         {`body { overflow-x: hidden; }`}
       </style>
