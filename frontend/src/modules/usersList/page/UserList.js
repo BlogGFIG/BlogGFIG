@@ -72,18 +72,26 @@ const UserList = () => {
     }
   };
 
-  const handleToggleUserStatus = (userId, currentStatus) => {
+  const handleToggleUserStatus = (userId, userStatus) => {
     const requesterEmail = getEmailFromToken();
     if (!requesterEmail) {
       alert('E-mail do usuário não encontrado no token.');
       return;
     }
 
-    const newStatus = currentStatus === "ativo" ? "inativo" : "ativo";
+    // Busca o usuário atual
+    const user = users.find(u => u.id === userId);
 
+    // Confirmação antes de marcar como reprovado
+    if (user.user_type !== "reproved") {
+      const confirmed = window.confirm("Tem certeza que deseja desativar esse usuário?");
+      if (!confirmed) return;
+    }
+
+    // Sempre envia para o backend
     const payload = {
       id: userId,
-      requester_email: requesterEmail,
+      aprovado: false // false para inativar/reprovar
     };
 
     const token = localStorage.getItem('token');
@@ -94,9 +102,12 @@ const UserList = () => {
       }
     })
       .then(() => {
-        setUsers(users.map(user =>
-          user.id === userId ? { ...user, status: newStatus } : user
+        setUsers(users.map(u =>
+          u.id === userId
+            ? { ...u, user_type: "reproved" }
+            : u
         ));
+        showSucessToast("Usuário desativado com sucesso!");
       })
       .catch(error => {
         console.error("Erro ao atualizar o status do usuário:", error);

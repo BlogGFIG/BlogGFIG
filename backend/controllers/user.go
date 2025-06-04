@@ -158,7 +158,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verifica se o status do usuário é "inativo"
-	if existingUser.UserType == "pending" || existingUser.UserType == "rejected" {
+	if existingUser.UserType == "pending" || existingUser.UserType == "reproved" {
 		// Se o usuário estiver pendente ou reprovado, não pode fazer login
 		http.Error(w, "Usuário inativo ou reprovado. Entre em contato com o suporte.", http.StatusForbidden)
 		return
@@ -235,7 +235,7 @@ func AtivarOuInativar(w http.ResponseWriter, r *http.Request) {
 	// Define o novo user_type com base na aprovação ou reprovação
 	newUserType := "user"
 	if !requestData.Aprovado {
-		newUserType = "rejected"
+		newUserType = "reproved"
 	}
 
 	// Atualiza o user_type do usuário
