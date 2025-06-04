@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box } from '@mui/system';
+import { Box, Typography } from '@mui/material'; // Adicionei Typography para mensagens
 import TextInput from '../../../../shared/components/inputs/TextInput';
 import PasswordInput from '../../../../shared/components/inputs/PasswordInput';
 import SubmitButton from '../../../../shared/components/buttons/SubmitButton';
@@ -10,9 +10,15 @@ import { showErrorToast } from '../../../../shared/components/toasters/ErrorToas
 import { useNavigate } from 'react-router-dom';
 
 const AuthForm = ({ isSignUp, setIsSignUp }) => {
-  const { register, handleSubmit } = useForm();
+  const { 
+    register, 
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm();
 
   const navigate = useNavigate();
+  const password = watch("password"); // Para validação de confirmação de senha
 
   const onSubmit = async (data) => {
     try {
@@ -31,16 +37,14 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
 
         if (response.status === 200) {
           showSucessToast("Login realizado com sucesso!");
-          // Salva o token no localStorage
           if (response.data && response.data.token) {
             localStorage.setItem('token', response.data.token);
           }
 
-          // Exemplo de como recuperar o token depois:
           const token = localStorage.getItem('token');
           console.log("Token JWT salvo no localStorage:", token);
 
-          navigate("/"); // Redireciona para a página inicial
+          navigate("/");
           return;
         }
       }
@@ -50,23 +54,26 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
       console.error("Erro na autenticação:", error);
 
       if (!error.response) {
-        showErrorToast("Erro de rede. Tente novamente.");
+        showErrorToast("Erro de rede. Verifique sua conexão e tente novamente.");
         return;
       }
 
       const { status } = error.response;
 
       if (status === 409) {
-        showErrorToast("Este e-mail já está cadastrado.");
+        showErrorToast("Este e-mail já está cadastrado. Faça login ou use outro e-mail.");
       } else if (status === 401) {
-        showErrorToast("Usuário ou senha incorretos.");
+        showErrorToast("Credenciais inválidas. Verifique seu e-mail e senha.");
       } else if (status === 403) {
-        showErrorToast("Usuário inativo ou não aprovado.");
+        showErrorToast("Acesso não autorizado. Sua conta pode estar inativa.");
       } else {
-        showErrorToast("Erro ao autenticar.");
+        showErrorToast("Ocorreu um erro inesperado. Tente novamente mais tarde.");
       }
     }
   };
+
+  // Expressão regular para validar senha forte
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/;
 
   return (
     <form sx={{padding: '0' }} onSubmit={handleSubmit(onSubmit)}>
@@ -108,10 +115,33 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
           </>
         )}
 
-        <SubmitButton text={isSignUp ? 'Cadastrar' : 'Login'} />
+        {/* Botão de submit com estado de loading */}
+        <SubmitButton 
+          text={isSignUp ? 'Cadastrar' : 'Login'} 
+          disabled={isSubmitting}
+          sx={{ mt: 2 }}
+        />
+
+        {/* Mensagem de rodapé */}
+        <Typography variant="body2" sx={{ 
+          color: 'text.secondary', 
+          mt: 2,
+          textAlign: 'center'
+        }}>
+          {isSignUp ? 'Já tem uma conta? ' : 'Ainda não tem uma conta? '}
+          <span 
+            onClick={() => setIsSignUp(!isSignUp)}
+            style={{ 
+              color: '#1976d2', 
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            {isSignUp ? 'Faça login' : 'Cadastre-se'}
+          </span>
+        </Typography>
       </Box>
     </form>
-
   );
 };
 
