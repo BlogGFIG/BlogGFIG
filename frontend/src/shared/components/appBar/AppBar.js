@@ -39,8 +39,13 @@ function ResponsiveAppBar() {
         const email = getEmailFromCookie();
         if (!email) return;
 
+        // Exemplo de requisição autenticada
+        const token = localStorage.getItem('token');
         const response = await axios.get('http://localhost:8000/get-user-type', {
           params: { email },
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         });
 
         const role = response.data.replace('Tipo de usuário: ', '').trim();
