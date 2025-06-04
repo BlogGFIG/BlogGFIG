@@ -1,75 +1,92 @@
-import React from "react";
-import { useForm, Controller } from "react-hook-form";
-import SubmitButton from '../../../../shared/components/buttons/SubmitButton';
-import ControlledSwitch from '../../../../shared/components/switchs/ControlledSwitch';
-import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+import React, { useState } from "react";
+import axios from "axios";
+import { Box, TextField, Button, Typography } from "@mui/material";
 import { authService } from '../../../../services/AuthService';
 import { showErrorToast } from '../../../../shared/components/toasters/ErrorToaster';
 import { showSucessToast } from "../../../../shared/components/toasters/SucessToaster";
+import { jwtDecode } from "jwt-decode"; // instale com npm install jwt-decode
 
 function AlteracaoDeSenhaPageContainer() {
-    const { control, handleSubmit } = useForm();
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [mensagem, setMensagem] = useState("");
 
-    const options = [
-        { value: 0, label: ' ' },
-        { value: 10, label: 'A cada dez dias' },
-        { value: 20, label: 'A cada vinte dias' },
-        { value: 30, label: 'A cada trinta dias' }
-    ];
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMensagem("");
 
-    const onSubmit = async (data) => {
-        try {
-            await authService.post("alterarSenha", data);
-            showSucessToast("Alteração de senha salva com sucesso!");
-        } catch (error) {
-            console.error("Erro ao salvar alteração de senha", error);
-            showErrorToast("Erro ao salvar alteração de senha");
+    if (novaSenha !== confirmarSenha) {
+      setMensagem("As senhas não coincidem.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const email = getEmailFromToken();
+      await axios.put(
+        "http://localhost:8000/anyUser/senhaPage",
+        {
+          email, // adicione o email aqui!
+          password: senhaAtual,
+          newPassword: novaSenha,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-        console.log(data)
-    };
+      );
+      setMensagem("Senha atualizada com sucesso!");
+      setSenhaAtual("");
+      setNovaSenha("");
+      setConfirmarSenha("");
+    } catch (error) {
+      setMensagem("Erro ao atualizar senha.");
+    }
+  };
 
-    return (
-        <form onSubmit={handleSubmit(onSubmit)}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <Box>
-                    <ControlledSwitch
-                        control={control}
-                        name="switchField"
-                        label="Ativar alteração de senha?" 
-                    />
-                </Box>
+  function getEmailFromToken() {
+    const token = localStorage.getItem("token");
+    if (!token) return "";
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || "";
+    } catch {
+      return "";
+    }
+  }
 
-                <Box>
-                    <FormControl fullWidth>
-                        <InputLabel id="select-label">Selecione a frequencia</InputLabel>
-                        <Controller
-                            name="dias"
-                            control={control}
-                            defaultValue=""
-                            render={({ field }) => (
-                                <Select
-                                    {...field}
-                                    labelId="select-label"
-                                    id="diasAlteracaoSenha"
-                                    label="Selecione a frequencia"
-                                >
-                                    {options.map((option) => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </FormControl>
-                </Box>
-
-                <Box>
-                    <SubmitButton text={'Salvar'} />
-                </Box>
-            </Box>
-        </form>
-    );
+  return (
+    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 400, mx: "auto", mt: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+      <Typography variant="h6">Alterar Senha</Typography>
+      <TextField
+        label="Senha atual"
+        type="password"
+        value={senhaAtual}
+        onChange={(e) => setSenhaAtual(e.target.value)}
+        required
+      />
+      <TextField
+        label="Nova senha"
+        type="password"
+        value={novaSenha}
+        onChange={(e) => setNovaSenha(e.target.value)}
+        required
+      />
+      <TextField
+        label="Confirmar nova senha"
+        type="password"
+        value={confirmarSenha}
+        onChange={(e) => setConfirmarSenha(e.target.value)}
+        required
+      />
+      <Button type="submit" variant="contained" color="primary">
+        Atualizar Senha
+      </Button>
+      {mensagem && <Typography color={mensagem.includes("sucesso") ? "primary" : "error"}>{mensagem}</Typography>}
+    </Box>
+  );
 }
 
 export default AlteracaoDeSenhaPageContainer;

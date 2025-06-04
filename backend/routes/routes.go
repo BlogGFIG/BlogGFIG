@@ -36,7 +36,7 @@ func HandleRequest() http.Handler {
 	r.HandleFunc("/login", controllers.Login).Methods("POST")
 
 	// Rota para a atualização da senha (USUÁRIO AUTENTICADO) (PUT)
-	anyUserRoutes.HandleFunc("/senhaPage", controllers.RefreshPassword).Methods("POST")
+	anyUserRoutes.HandleFunc("/senhaPage", controllers.RefreshPassword).Methods("PUT")
 
 	// Rota para redefinir senha (TODOS) (POST)
 	r.HandleFunc("/resetPassword", controllers.ResetPassword).Methods("POST")
