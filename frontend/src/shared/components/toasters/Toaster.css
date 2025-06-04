@@ -30,3 +30,11 @@
     color: white;
   }
   
+  .swal2-container {
+    z-index: 2000 !important;
+  }
+
+  .colored-toast.swal2-popup {
+    z-index: 1400 !important;
+    top: 70px !important; /* ajuste conforme a altura da sua navbar */
+}

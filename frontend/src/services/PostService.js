@@ -1,14 +1,17 @@
 import axios from "axios";
+import { showErrorToast } from '../shared/components/toasters/ErrorToaster';
 
-const API_URL = "https://backend-gfig.onrender.com";
+const API_URL = "http://localhost:8000";
 
 export const postService = {
   createPost: async (formData) => {
     try {
       console.log("Enviando dados para criar a postagem...");
-      const response = await axios.post(`${API_URL}/posts`, formData, {
+      const token = localStorage.getItem('token'); // Recupera o token do localStorage
+      const response = await axios.post(`${API_URL}/anyUser/create-post`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': token ? `Bearer ${token}` : '', // Adiciona o token no header
         },
       });
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
+	"github.com/BlogGFIG/BlogGFIG/utils"
 	"github.com/golang-jwt/jwt/v5"
 
 	"gorm.io/gorm"
@@ -40,224 +41,216 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 
 // CreatePost: Função para criar uma nova postagem
 func CreatePost(w http.ResponseWriter, r *http.Request) {
-    // Validação do token
-    authHeader := r.Header.Get("Authorization")
-    if authHeader == "" {
-        http.Error(w, "Token não fornecido", http.StatusUnauthorized)
-        return
-    }
+	// Validação do token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
 
-    // Remove o prefixo "Bearer " do token
-    tokenString := authHeader[len("Bearer "):]
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
 
-    // Valida o token e obtém as claims
-    claims, err := validateToken(tokenString)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusUnauthorized)
-        return
-    }
+	// Valida o token e obtém as claims
+	claims, err := validateToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-    // Obtém o e-mail e o tipo de usuário das claims
-    email, ok := claims["email"].(string)
-    if !ok {
-        http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	// Obtém o e-mail e o tipo de usuário das claims
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    userType, ok := claims["role"].(string)
-    if !ok {
-        http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	userType, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    // Validando se o usuário pode criar uma postagem
-    if userType != "admin" && userType != "master" {
-        http.Error(w, "Usuário não autorizado a criar postagens", http.StatusForbidden)
-        return
-    }
+	// Validando se o usuário pode criar uma postagem
+	if userType != "admin" && userType != "master" {
+		http.Error(w, "Usuário não autorizado a criar postagens", http.StatusForbidden)
+		return
+	}
 
-    // Defina o limite para o tamanho do arquivo
-    err = r.ParseMultipartForm(10 << 20) // 10 MB
-    if err != nil {
-        http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
-        return
-    }
+	// Defina o limite para o tamanho do arquivo
+	err = r.ParseMultipartForm(10 << 20) // 10 MB
+	if err != nil {
+		http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
+		return
+	}
 
-    // Pegando os dados do formulário
-    title := r.FormValue("title")
-    content := r.FormValue("content")
-    imageFile, _, err := r.FormFile("image")
+	// Pegando os dados do formulário
+	title := r.FormValue("title")
+	content := r.FormValue("content")
 
-    var imageBytes []byte
-    if err == nil {
-        // Lendo o conteúdo do arquivo de imagem e convertendo para []byte
-        imageBytes, err = io.ReadAll(imageFile)
-        if err != nil {
-            http.Error(w, "Erro ao ler a imagem", http.StatusInternalServerError)
-            return
-        }
-        defer imageFile.Close()
-    }
+	// Filtro de badwords
+	if utils.ContainsBadword(title) || utils.ContainsBadword(content) {
+		http.Error(w, "O título ou conteúdo contém palavras proibidas", http.StatusBadRequest)
+		return
+	}
 
-    // Buscando o user_id com base no e-mail
-    var user models.User
-    result := dataBase.DB.Where("email = ?", email).First(&user)
-    if result.Error != nil {
-        if result.Error == gorm.ErrRecordNotFound {
-            http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-            return
-        }
-        http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-        return
-    }
+	imageFile, _, err := r.FormFile("image")
+	var imageBytes []byte
+	if err == nil {
+		imageBytes, err = io.ReadAll(imageFile)
+		if err != nil {
+			http.Error(w, "Erro ao ler a imagem", http.StatusInternalServerError)
+			return
+		}
+		defer imageFile.Close()
+	}
 
-    // Agora podemos armazenar a postagem, incluindo o user_id
-    post := models.Post{
-        Title:     title,
-        Content:   content,
-        Image:     imageBytes,
-        UserID:    user.ID,
-        UserEmail: email,
-        Pinned:    false,
-    }
+	// Buscando o user_id com base no e-mail
+	var user models.User
+	result := dataBase.DB.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
+		return
+	}
 
-    // Inserção no banco de dados
-    result = dataBase.DB.Create(&post)
-    if result.Error != nil {
-        http.Error(w, "Erro ao salvar a postagem", http.StatusInternalServerError)
-        return
-    }
+	post := models.Post{
+		Title:     title,
+		Content:   content,
+		Image:     imageBytes,
+		UserID:    user.ID,
+		UserEmail: email,
+		Pinned:    false,
+	}
 
-    // Enviar resposta de sucesso
-    w.WriteHeader(http.StatusCreated)
-    w.Write([]byte("Postagem criada com sucesso!"))
+	result = dataBase.DB.Create(&post)
+	if result.Error != nil {
+		http.Error(w, "Erro ao salvar a postagem", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Postagem criada com sucesso!"))
 }
 
 func GetPosts(w http.ResponseWriter, r *http.Request) {
-	// Logando quando a função é chamada
-	fmt.Println("Recebendo requisição para obter postagens")
+	type PostWithUser struct {
+		models.Post
+		UserName string `json:"user_name"`
+	}
 
-	var posts []models.Post
+	var postsWithUsers []PostWithUser
 
-	// Buscando todas as postagens no banco, ordenando primeiro pelos fixados e depois por data de criação
-	result := dataBase.DB.Order("pinned DESC").Order("created_at DESC").Find(&posts)
+	result := dataBase.DB.Table("posts").
+		Select("posts.*, users.name as user_name").
+		Joins("inner join users on users.id = posts.user_id").
+		Order("posts.pinned DESC").
+		Order("posts.created_at DESC").
+		Scan(&postsWithUsers)
+
 	if result.Error != nil {
 		http.Error(w, "Erro ao buscar postagens", http.StatusInternalServerError)
-		fmt.Println("Erro ao buscar postagens:", result.Error)
 		return
 	}
 
-	// Configura o cabeçalho da resposta para JSON
 	w.Header().Set("Content-Type", "application/json")
-
-	// Codifica as postagens em JSON e envia para o front-end
-	if err := json.NewEncoder(w).Encode(posts); err != nil {
-		http.Error(w, "Erro ao codificar postagens", http.StatusInternalServerError)
-		return
-	}
-
-	// Logando sucesso ao enviar a resposta
-	fmt.Println("Postagens enviadas com sucesso")
+	json.NewEncoder(w).Encode(postsWithUsers)
 }
 
 // EditPost: Função para editar uma postagem existente
 func EditPost(w http.ResponseWriter, r *http.Request) {
-    // Validação do token
-    authHeader := r.Header.Get("Authorization")
-    if authHeader == "" {
-        http.Error(w, "Token não fornecido", http.StatusUnauthorized)
-        return
-    }
+	// Validação do token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
 
-    // Remove o prefixo "Bearer " do token
-    tokenString := authHeader[len("Bearer "):]
+	tokenString := authHeader[len("Bearer "):]
+	claims, err := validateToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-    // Valida o token e obtém as claims
-    claims, err := validateToken(tokenString)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusUnauthorized)
-        return
-    }
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    // Obtém o e-mail e o tipo de usuário das claims
-    email, ok := claims["email"].(string)
-    if !ok {
-        http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	userType, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    userType, ok := claims["role"].(string)
-    if !ok {
-        http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	err = r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
+		return
+	}
 
-    // Defina o limite para o tamanho do arquivo
-    err = r.ParseMultipartForm(10 << 20) // 10 MB
-    if err != nil {
-        http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
-        return
-    }
+	postID := r.FormValue("post_id")
+	title := r.FormValue("title")
+	content := r.FormValue("content")
 
-    // Pegando os dados do formulário
-    postID := r.FormValue("post_id")
-    title := r.FormValue("title")
-    content := r.FormValue("content")
-    imageFile, _, err := r.FormFile("image")
+	// Filtro de badwords
+	if (title != "" && utils.ContainsBadword(title)) || (content != "" && utils.ContainsBadword(content)) {
+		http.Error(w, "O título ou conteúdo contém palavras proibidas", http.StatusBadRequest)
+		return
+	}
 
-    // Buscando a postagem com base no ID
-    var post models.Post
-    result := dataBase.DB.First(&post, postID)
-    if result.Error != nil {
-        if result.Error == gorm.ErrRecordNotFound {
-            http.Error(w, "Postagem não encontrada", http.StatusNotFound)
-            return
-        }
-        http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
-        return
-    }
+	imageFile, _, err := r.FormFile("image")
 
-    // Validação de permissão para editar a postagem
-    if userType == "user" {
-        // Usuário comum só pode editar suas próprias postagens
-        if post.UserEmail != email {
-            http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
-            return
-        }
-    } else if userType != "admin" && userType != "master" {
-        // Apenas admin ou master podem editar qualquer postagem
-        http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
-        return
-    }
+	var post models.Post
+	result := dataBase.DB.First(&post, postID)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Postagem não encontrada", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
+		return
+	}
 
-    // Atualizando os campos da postagem
-    if title != "" {
-        post.Title = title
-    }
-    if content != "" {
-        post.Content = content
-    }
-    if err == nil {
-        // Lendo o conteúdo do arquivo de imagem e convertendo para []byte
-        imageBytes, err := io.ReadAll(imageFile)
-        if err != nil {
-            http.Error(w, "Erro ao ler a imagem", http.StatusInternalServerError)
-            return
-        }
-        post.Image = imageBytes
-        defer imageFile.Close()
-    }
-    
-    // Salvando as alterações no banco de dados
-    result = dataBase.DB.Save(&post)
-    if result.Error != nil {
-        http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
-        return
-    }
+	if userType == "user" {
+		if post.UserEmail != email {
+			http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
+			return
+		}
+	} else if userType != "admin" && userType != "master" {
+		http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
+		return
+	}
 
-    // Enviar resposta de sucesso
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte("Postagem editada com sucesso!"))
+	if title != "" {
+		post.Title = title
+	}
+	if content != "" {
+		post.Content = content
+	}
+	if err == nil {
+		imageBytes, err := io.ReadAll(imageFile)
+		if err != nil {
+			http.Error(w, "Erro ao ler a imagem", http.StatusInternalServerError)
+			return
+		}
+		post.Image = imageBytes
+		defer imageFile.Close()
+	}
+
+	result = dataBase.DB.Save(&post)
+	if result.Error != nil {
+		http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Postagem editada com sucesso!"))
 }
 
 // DeletePost: Função para deletar uma postagem existente e seus comentários
@@ -440,176 +433,176 @@ func UnpinPost(w http.ResponseWriter, r *http.Request) {
 
 // ArchivePost: Função para arquivar uma postagem
 func ArchivePost(w http.ResponseWriter, r *http.Request) {
-    // Validação do token
-    authHeader := r.Header.Get("Authorization")
-    if authHeader == "" {
-        http.Error(w, "Token não fornecido", http.StatusUnauthorized)
-        return
-    }
+	// Validação do token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
 
-    // Remove o prefixo "Bearer " do token
-    tokenString := authHeader[len("Bearer "):]
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
 
-    // Valida o token e obtém as claims
-    claims, err := validateToken(tokenString)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusUnauthorized)
-        return
-    }
+	// Valida o token e obtém as claims
+	claims, err := validateToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-    // Obtém o e-mail e o tipo de usuário das claims
-    email, ok := claims["email"].(string)
-    if !ok {
-        http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	// Obtém o e-mail e o tipo de usuário das claims
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    userType, ok := claims["role"].(string)
-    if !ok {
-        http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	userType, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    // Recebe os dados do corpo da requisição
-    var request struct {
-        PostID uint `json:"postId"`
-    }
-    err = json.NewDecoder(r.Body).Decode(&request)
-    if err != nil {
-        http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
-        return
-    }
+	// Recebe os dados do corpo da requisição
+	var request struct {
+		PostID uint `json:"postId"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
+		return
+	}
 
-    // Buscando o usuário pelo e-mail
-    var user models.User
-    result := dataBase.DB.Where("email = ?", email).First(&user)
-    if result.Error != nil {
-        if result.Error == gorm.ErrRecordNotFound {
-            http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-            return
-        }
-        http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-        return
-    }
+	// Buscando o usuário pelo e-mail
+	var user models.User
+	result := dataBase.DB.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
+		return
+	}
 
-    // Buscando a postagem com base no ID
-    var post models.Post
-    result = dataBase.DB.First(&post, request.PostID)
-    if result.Error != nil {
-        if result.Error == gorm.ErrRecordNotFound {
-            http.Error(w, "Postagem não encontrada", http.StatusNotFound)
-            return
-        }
-        http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
-        return
-    }
+	// Buscando a postagem com base no ID
+	var post models.Post
+	result = dataBase.DB.First(&post, request.PostID)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Postagem não encontrada", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
+		return
+	}
 
-    // Validando se o usuário pode arquivar a postagem
-    if post.UserID != user.ID && userType != "admin" && userType != "master" {
-        http.Error(w, "Usuário não autorizado a arquivar esta postagem", http.StatusForbidden)
-        return
-    }
+	// Validando se o usuário pode arquivar a postagem
+	if post.UserID != user.ID && userType != "admin" && userType != "master" {
+		http.Error(w, "Usuário não autorizado a arquivar esta postagem", http.StatusForbidden)
+		return
+	}
 
-    // Arquivando a postagem
-    post.Archived = true
-    result = dataBase.DB.Save(&post)
-    if result.Error != nil {
-        http.Error(w, "Erro ao arquivar a postagem", http.StatusInternalServerError)
-        return
-    }
+	// Arquivando a postagem
+	post.Archived = true
+	result = dataBase.DB.Save(&post)
+	if result.Error != nil {
+		http.Error(w, "Erro ao arquivar a postagem", http.StatusInternalServerError)
+		return
+	}
 
-    // Resposta de sucesso
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte("Postagem arquivada com sucesso!"))
+	// Resposta de sucesso
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Postagem arquivada com sucesso!"))
 }
 
 // UnarchivePost: Função para desarquivar uma postagem
 func UnarchivePost(w http.ResponseWriter, r *http.Request) {
-    // Validação do token
-    authHeader := r.Header.Get("Authorization")
-    if authHeader == "" {
-        http.Error(w, "Token não fornecido", http.StatusUnauthorized)
-        return
-    }
+	// Validação do token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
 
-    // Remove o prefixo "Bearer " do token
-    tokenString := authHeader[len("Bearer "):]
+	// Remove o prefixo "Bearer " do token
+	tokenString := authHeader[len("Bearer "):]
 
-    // Valida o token e obtém as claims
-    claims, err := validateToken(tokenString)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusUnauthorized)
-        return
-    }
+	// Valida o token e obtém as claims
+	claims, err := validateToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-    // Obtém o e-mail e o tipo de usuário das claims
-    email, ok := claims["email"].(string)
-    if !ok {
-        http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	// Obtém o e-mail e o tipo de usuário das claims
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    userType, ok := claims["role"].(string)
-    if !ok {
-        http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
-        return
-    }
+	userType, ok := claims["role"].(string)
+	if !ok {
+		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
 
-    // Recebe os dados do corpo da requisição
-    var request struct {
-        PostID uint `json:"postId"`
-    }
-    err = json.NewDecoder(r.Body).Decode(&request)
-    if err != nil {
-        http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
-        return
-    }
+	// Recebe os dados do corpo da requisição
+	var request struct {
+		PostID uint `json:"postId"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
+		return
+	}
 
-    // Buscando o usuário pelo e-mail
-    var user models.User
-    result := dataBase.DB.Where("email = ?", email).First(&user)
-    if result.Error != nil {
-        if result.Error == gorm.ErrRecordNotFound {
-            http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-            return
-        }
-        http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-        return
-    }
+	// Buscando o usuário pelo e-mail
+	var user models.User
+	result := dataBase.DB.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
+		return
+	}
 
-    // Buscando a postagem com base no ID
-    var post models.Post
-    result = dataBase.DB.First(&post, request.PostID)
-    if result.Error != nil {
-        if result.Error == gorm.ErrRecordNotFound {
-            http.Error(w, "Postagem não encontrada", http.StatusNotFound)
-            return
-        }
-        http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
-        return
-    }
+	// Buscando a postagem com base no ID
+	var post models.Post
+	result = dataBase.DB.First(&post, request.PostID)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Postagem não encontrada", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
+		return
+	}
 
-    // Validando se o usuário pode desarquivar a postagem
-    if post.UserID != user.ID && userType != "admin" && userType != "master" {
-        http.Error(w, "Usuário não autorizado a desarquivar esta postagem", http.StatusForbidden)
-        return
-    }
+	// Validando se o usuário pode desarquivar a postagem
+	if post.UserID != user.ID && userType != "admin" && userType != "master" {
+		http.Error(w, "Usuário não autorizado a desarquivar esta postagem", http.StatusForbidden)
+		return
+	}
 
-    // Verificando se a postagem já está desarquivada
-    if !post.Archived {
-        http.Error(w, "A postagem já está desarquivada", http.StatusBadRequest)
-        return
-    }
+	// Verificando se a postagem já está desarquivada
+	if !post.Archived {
+		http.Error(w, "A postagem já está desarquivada", http.StatusBadRequest)
+		return
+	}
 
-    // Desarquivando a postagem
-    post.Archived = false
-    result = dataBase.DB.Save(&post)
-    if result.Error != nil {
-        http.Error(w, "Erro ao desarquivar a postagem", http.StatusInternalServerError)
-        return
-    }
+	// Desarquivando a postagem
+	post.Archived = false
+	result = dataBase.DB.Save(&post)
+	if result.Error != nil {
+		http.Error(w, "Erro ao desarquivar a postagem", http.StatusInternalServerError)
+		return
+	}
 
-    // Resposta de sucesso
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte("Postagem desarquivada com sucesso!"))
+	// Resposta de sucesso
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Postagem desarquivada com sucesso!"))
 }

@@ -3,8 +3,9 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
@@ -59,13 +60,37 @@ func ApproveOrRejectUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Pega o email do moderador a partir do cookie
-	cookie, err := r.Cookie("email")
-	if err != nil {
-		http.Error(w, "Email do moderador não encontrado nos cookies", http.StatusUnauthorized)
+	// NOVO: Pega o token do header Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
 		return
 	}
-	emailModerador := cookie.Value
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		http.Error(w, "Formato do token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	// NOVO: Decodifica o token JWT para pegar o e-mail do moderador
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte("bloggfig@2025"), nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Não foi possível extrair claims do token", http.StatusUnauthorized)
+		return
+	}
+	emailModerador, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "E-mail não encontrado no token", http.StatusUnauthorized)
+		return
+	}
 
 	// Estrutura para capturar os dados enviados pelo frontend
 	var requestData struct {
@@ -149,7 +174,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userId": existingUser.ID,
 		"role":   existingUser.UserType,
-		"email": existingUser.Email,
+		"email":  existingUser.Email,
 		"exp":    time.Now().Add(time.Hour * 24).Unix(), // Expira em 24 horas
 	})
 
@@ -419,7 +444,12 @@ func RefreshPassword(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Senha atualizada com sucesso"))
 }
 
-// Atualiza a senha quando o usuário esqueceu a senha atual - Envio do email de redefinição
+// Gere um código numérico de 6 dígitos
+func generateResetCode() string {
+	return fmt.Sprintf("%06d", rand.Intn(1000000))
+}
+
+// Atualiza a senha quando o usuário esqueceu a senha atual - Envio do código por e-mail
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
@@ -431,15 +461,8 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&passwordReset)
-	if err != nil {
-		http.Error(w, "Erro ao decodificar JSON", http.StatusBadRequest)
-		log.Println("Erro ao decodificar JSON:", err)
-		return
-	}
-
-	if passwordReset.Email == "" {
+	if err != nil || passwordReset.Email == "" {
 		http.Error(w, "Email não fornecido", http.StatusBadRequest)
-		log.Println("Email não fornecido")
 		return
 	}
 
@@ -447,58 +470,42 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	result := dataBase.DB.Where("email = ?", passwordReset.Email).First(&existingUser)
 	if result.Error == gorm.ErrRecordNotFound {
 		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-		log.Println("Usuário não encontrado:", passwordReset.Email)
 		return
 	}
-
 	if result.Error != nil {
 		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-		log.Println("Erro ao buscar usuário:", result.Error)
 		return
 	}
 
-	// Gere um token único para a redefinição de senha
-	token, err := generateResetToken()
-	if err != nil {
-		http.Error(w, "Erro ao gerar token de redefinição de senha", http.StatusInternalServerError)
-		log.Println("Erro ao gerar token de redefinição de senha:", err)
-		return
-	}
+	// Gere um código de 6 dígitos
+	code := generateResetCode()
+	expiresAt := time.Now().UTC().Add(30 * time.Minute)
 
-	// Defina a data de expiração do token (por exemplo, 1 hora a partir de agora)
-	expiresAt := time.Now().Add(12 * time.Hour)
-
-	// Armazene o token na tabela password_resets
+	// Salve o código na tabela password_resets
 	resetEntry := models.PasswordReset{
 		Email:     passwordReset.Email,
-		Token:     token,
+		Token:     code, // Aqui usamos o campo Token para armazenar o código
 		ExpiresAt: expiresAt,
 	}
+	dataBase.DB.Where("email = ?", passwordReset.Email).Delete(&models.PasswordReset{}) // Remove códigos antigos
 	result = dataBase.DB.Create(&resetEntry)
 	if result.Error != nil {
-		http.Error(w, "Erro ao armazenar token de redefinição de senha", http.StatusInternalServerError)
-		log.Println("Erro ao armazenar token de redefinição de senha:", result.Error)
+		http.Error(w, "Erro ao armazenar código de redefinição", http.StatusInternalServerError)
 		return
 	}
 
-	// Gere um link de redefinição de senha
-	resetLink := fmt.Sprintf("https://backend-gfig.onrender.com/updatePassword?email=%s&token=%s", passwordReset.Email, token)
-	log.Println("Link de redefinição de senha gerado:", resetLink)
-
-	// Envie o e-mail de redefinição de senha
-	err = sendResetEmail(passwordReset.Email, resetLink)
+	// Envie o código por e-mail
+	err = sendResetEmail(passwordReset.Email, code)
 	if err != nil {
-		http.Error(w, "Erro ao enviar e-mail de redefinição de senha", http.StatusInternalServerError)
-		log.Println("Erro ao enviar e-mail de redefinição de senha:", err)
+		http.Error(w, "Erro ao enviar e-mail", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("E-mail de redefinição de senha enviado com sucesso"))
-	log.Println("E-mail de redefinição de senha enviado com sucesso para:", passwordReset.Email)
+	w.Write([]byte("Código de redefinição enviado com sucesso"))
 }
 
-// Atualiza a senha quando o usuário esqueceu a senha atual - Realizar a alteração
+// Atualiza a senha usando o código
 func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
@@ -507,73 +514,59 @@ func UpdatePassword(w http.ResponseWriter, r *http.Request) {
 
 	var passwordUpdate struct {
 		Email       string `json:"email"`
-		Token       string `json:"token"`
+		Code        string `json:"code"`
 		NewPassword string `json:"newPassword"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&passwordUpdate)
-	if err != nil {
-		http.Error(w, "Erro ao decodificar JSON", http.StatusBadRequest)
-		log.Println("Erro ao decodificar JSON:", err)
-		return
-	}
-
-	if passwordUpdate.Email == "" || passwordUpdate.Token == "" || passwordUpdate.NewPassword == "" {
+	if err != nil || passwordUpdate.Email == "" || passwordUpdate.Code == "" || passwordUpdate.NewPassword == "" {
 		http.Error(w, "Dados incompletos", http.StatusBadRequest)
-		log.Println("Dados incompletos")
 		return
 	}
 
-	// Verifique o token na tabela password_resets
+	// Verifique o código na tabela password_resets
 	var resetEntry models.PasswordReset
-	result := dataBase.DB.Where("email = ? AND token = ?", passwordUpdate.Email, passwordUpdate.Token).First(&resetEntry)
+	code := strings.TrimSpace(passwordUpdate.Code)
+	result := dataBase.DB.Where("email = ? AND token = ?", passwordUpdate.Email, code).First(&resetEntry)
 	if result.Error == gorm.ErrRecordNotFound {
-		http.Error(w, "Token inválido ou expirado", http.StatusUnauthorized)
-		log.Println("Token inválido ou expirado:", passwordUpdate.Email)
+		http.Error(w, "Código inválido ou expirado", http.StatusUnauthorized)
 		return
 	}
 
-	if result.Error != nil {
-		http.Error(w, "Erro ao buscar token de redefinição de senha", http.StatusInternalServerError)
-		log.Println("Erro ao buscar token de redefinição de senha:", result.Error)
-		return
-	}
+	now := time.Now().UTC()
+	expiresAt := resetEntry.ExpiresAt.UTC()
 
-	// Verifique se o token expirou
-	if time.Now().After(resetEntry.ExpiresAt) {
-		http.Error(w, "Token expirado", http.StatusUnauthorized)
-		log.Println("Token expirado:", passwordUpdate.Email)
+	fmt.Println("Código recebido:", code)
+	fmt.Println("Código no banco:", resetEntry.Token)
+	fmt.Println("Expira em:", expiresAt)
+	fmt.Println("Agora:", now)
+	fmt.Println("Expirou?", now.After(expiresAt))
+
+	if now.After(expiresAt) {
+		http.Error(w, "Código inválido ou expirado", http.StatusUnauthorized)
 		return
 	}
 
 	var existingUser models.User
 	result = dataBase.DB.Where("email = ?", passwordUpdate.Email).First(&existingUser)
 	if result.Error == gorm.ErrRecordNotFound {
+		// Remove o código mesmo se o usuário não for encontrado
+		dataBase.DB.Delete(&resetEntry)
 		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-		log.Println("Usuário não encontrado:", passwordUpdate.Email)
 		return
 	}
 
-	if result.Error != nil {
-		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-		log.Println("Erro ao buscar usuário:", result.Error)
-		return
-	}
-
-	// Atualize a senha do usuário
+	// Atualize a senha
 	updateResult := dataBase.DB.Model(&existingUser).Update("password", passwordUpdate.NewPassword)
+	// Remova o código após o uso (sempre, independente de erro)
+	dataBase.DB.Where("email = ? AND token = ?", resetEntry.Email, resetEntry.Token).Delete(&models.PasswordReset{})
 	if updateResult.Error != nil {
 		http.Error(w, "Erro ao atualizar a senha", http.StatusInternalServerError)
-		log.Println("Erro ao atualizar a senha:", updateResult.Error)
 		return
 	}
-
-	// Remova o token da tabela password_resets após o uso
-	dataBase.DB.Delete(&resetEntry)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Senha atualizada com sucesso"))
-	log.Println("Senha atualizada com sucesso para:", passwordUpdate.Email)
 }
 
 func GetUserTypeByToken(w http.ResponseWriter, r *http.Request) {

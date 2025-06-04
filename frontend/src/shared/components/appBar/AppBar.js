@@ -5,57 +5,40 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Menu from '@mui/material/Menu';
-import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import AdbIcon from '@mui/icons-material/Adb';
+import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const pages = ['Products', 'Pricing', 'Blog'];
-const settings = ['Perfil', 'configurações', 'Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens','Sair'];
-
-function clearCookies() {
-  document.cookie.split(";").forEach(function(c) {
-    document.cookie = c
-      .replace(/^ +/, "")
-      .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-  });
-}
+const masterSettings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Sair'];
+const adminSettings = ['Aprovar inscrição', 'Gerenciar postagens', 'Sair'];
+const userSettings = ['Sair'];
+const unauthenticatedSettings = ['Entrar'];
 
 function ResponsiveAppBar() {
-  const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [userRole, setUserRole] = React.useState('');
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const navigate = useNavigate();
 
-  // Função para pegar o e-mail dos cookies
-  const getEmailFromCookie = () => {
-    const cookie = document.cookie.split('; ').find(row => row.startsWith('email='));
-    if (cookie) {
-      return cookie.split('=')[1];
-    }
-    return null;
-  };
-
   React.useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
+
+    if (!token) return;
+
     const fetchUserRole = async () => {
       try {
-        const email = getEmailFromCookie();
-        if (!email) {
-          console.warn("E-mail não encontrado nos cookies.");
-          return;
-        }
-
-        const response = await axios.get('https://backend-gfig.onrender.com/get-user-type', {
-          params: { email: email }, // Passando o e-mail como parâmetro na URL
+        const response = await axios.get('http://localhost:8000/get-user-type', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         });
 
         const role = response.data.replace('Tipo de usuário: ', '').trim();
-        console.log('Tipo de usuário:', role);
         setUserRole(role);
       } catch (error) {
         console.error('Erro ao obter o papel do usuário', error);
@@ -65,136 +48,101 @@ function ResponsiveAppBar() {
     fetchUserRole();
   }, []);
 
-  const handleOpenNavMenu = (event) => {
-    setAnchorElNav(event.currentTarget);
-  };
-
   const handleOpenUserMenu = (event) => {
     setAnchorElUser(event.currentTarget);
-  };
-
-  const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
   };
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
 
+  const getSettingsForRole = () => {
+    if (userRole === 'master') return masterSettings;
+    if (userRole === 'admin') return adminSettings;
+    if (userRole === 'user') return userSettings;
+    return [];
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+    setUserRole('');
+    navigate('/login');
+  };
+
   return (
-    <AppBar position="static">
+    <AppBar
+      position="fixed"
+      elevation={0}
+      sx={{
+        backgroundColor: 'transparent',
+        borderBottom: '1px solid black',
+        backdropFilter: 'blur(10px)',
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+      }}
+    >
       <Container maxWidth="xl">
-        <Toolbar disableGutters>
-          <AdbIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
-          <Typography
-            variant="h6"
-            noWrap
+        <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
+          {/* Logo e nome */}
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => navigate('/')}
-            sx={{
-              mr: 2,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              cursor: 'pointer',
-            }}
           >
-            LOGO
-          </Typography>
-
-          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-            <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleOpenNavMenu}
-              color="inherit"
+            <AdbIcon sx={{ mr: 1, color: 'black' }} />
+            <Typography
+              variant="h6"
+              noWrap
+              sx={{
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                letterSpacing: '.3rem',
+                color: 'black',
+                textDecoration: 'none',
+              }}
             >
-              <MenuIcon />
-            </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorElNav}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-              keepMounted
-              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              open={Boolean(anchorElNav)}
-              onClose={handleCloseNavMenu}
-              sx={{ display: { xs: 'block', md: 'none' } }}
-            >
-              {pages.map((page) => (
-                <MenuItem key={page} onClick={handleCloseNavMenu}>
-                  <Typography sx={{ textAlign: 'center' }}>{page}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
+              LOGO
+            </Typography>
           </Box>
 
-          <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
-          <Typography
-            variant="h5"
-            noWrap
-            onClick={() => navigate('/')}
-            sx={{
-              mr: 2,
-              display: { xs: 'flex', md: 'none' },
-              flexGrow: 1,
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            LOGO
-          </Typography>
-
-          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-            {pages.map((page) => (
-              <Button
-                key={page}
-                onClick={handleCloseNavMenu}
-                sx={{ my: 2, color: 'white', display: 'block' }}
-              >
-                {page}
-              </Button>
-            ))}
-          </Box>
-
+          {/* Ícone de usuário */}
           <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
+            <Tooltip title="Abrir configurações">
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="Remy Sharp" src="/static/images/avatar/2.jpg" />
+                <AccountCircle sx={{ fontSize: 32, color: 'black' }} />
               </IconButton>
             </Tooltip>
             <Menu
               sx={{ mt: '45px' }}
-              id="menu-appbar"
               anchorEl={anchorElUser}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
               keepMounted
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
               open={Boolean(anchorElUser)}
               onClose={handleCloseUserMenu}
             >
-              {settings.map((setting) => {
-                const isMasterOnly = ['Aprovar inscrição', 'Alterar níveis de permissão'].includes(setting);
-                if (isMasterOnly && userRole !== 'master') return null;
-
-                return (
+              {!isAuthenticated ? (
+                <MenuItem
+                  onClick={() => {
+                    handleCloseUserMenu();
+                    navigate('/login');
+                  }}
+                >
+                  <Typography textAlign="center">Entrar</Typography>
+                </MenuItem>
+              ) : (
+                getSettingsForRole().map((setting) => (
                   <MenuItem
                     key={setting}
                     onClick={() => {
                       handleCloseUserMenu();
-                      if (setting === 'configurações') {
-                        navigate('/user/settings');
-                      } else if (setting === 'Sair') {
-                        clearCookies();
-                        navigate('/login');
+                      if (setting === 'Sair') {
+                        handleLogout();
                       } else if (setting === 'Aprovar inscrição') {
                         navigate('/UserActiveList');
                       } else if (setting === 'Alterar níveis de permissão') {
@@ -204,10 +152,10 @@ function ResponsiveAppBar() {
                       }
                     }}
                   >
-                    <Typography sx={{ textAlign: 'center' }}>{setting}</Typography>
+                    <Typography textAlign="center">{setting}</Typography>
                   </MenuItem>
-                );
-              })}
+                ))
+              )}
             </Menu>
           </Box>
         </Toolbar>

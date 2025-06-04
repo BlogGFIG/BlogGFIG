@@ -9,7 +9,7 @@ type Password struct {
 }
 
 type PasswordReset struct {
-    Email     string    `gorm:"primaryKey"`
-    Token     string    `gorm:"primaryKey"`
+    Email     string
+    Token     string
     ExpiresAt time.Time
 }

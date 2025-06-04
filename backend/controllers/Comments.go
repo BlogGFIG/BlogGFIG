@@ -7,6 +7,7 @@ import (
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
+	"github.com/BlogGFIG/BlogGFIG/utils"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
@@ -21,6 +22,12 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&commentRequest)
 	if err != nil {
 		http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
+		return
+	}
+
+	// Filtro de badwords
+	if utils.ContainsBadword(commentRequest.Content) {
+		http.Error(w, "O comentário contém palavras proibidas", http.StatusBadRequest)
 		return
 	}
 
@@ -133,6 +140,12 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&commentRequest)
 	if err != nil {
 		http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
+		return
+	}
+
+	// Filtro de badwords
+	if utils.ContainsBadword(commentRequest.Content) {
+		http.Error(w, "O comentário contém palavras proibidas", http.StatusBadRequest)
 		return
 	}
 

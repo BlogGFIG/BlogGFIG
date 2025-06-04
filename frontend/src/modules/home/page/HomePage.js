@@ -1,31 +1,45 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Container, Typography } from '@mui/material';
-import { useForm } from 'react-hook-form'; 
+import {
+  Box,
+  Container,
+  Modal,
+  Button
+} from '@mui/material';
+import { useForm } from 'react-hook-form';
 import PostForm from '../components/PostForm';
 import Feed from '../../feed/page/Feed';
 import axios from 'axios';
+import AddIcon from '@mui/icons-material/Add';
+import { jwtDecode } from 'jwt-decode';
 
 const HomePage = () => {
-  const { register, handleSubmit, setValue } = useForm(); 
+  const { register, handleSubmit, setValue } = useForm();
   const [userRole, setUserRole] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
-        // Função para pegar o e-mail dos cookies
-        const getEmailFromCookies = () => {
-          return document.cookie.replace(/(?:(?:^|.*;\s*)email\s*=\s*([^;]*).*$)|^.*$/, "$1");
-        };
-
-        const email = getEmailFromCookies();  // Função para pegar o e-mail do cookie
-        if (!email) {
-          console.warn("E-mail não encontrado nos cookies.");
+        // Pegue o token do localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.warn("Token não encontrado no localStorage.");
           return;
         }
 
-        // Requisição GET para pegar o tipo de usuário
-        const response = await axios.get('https://backend-gfig.onrender.com/get-user-type', {
-          params: { email: email }, // Envia o e-mail como parâmetro na URL
+        // Decodifique o token para obter o e-mail
+        const decoded = jwtDecode(token);
+        const email = decoded.email;
+        if (!email) {
+          console.warn("E-mail não encontrado no token.");
+          return;
+        }
+
+        const response = await axios.get('http://localhost:8000/get-user-type', {
+          params: { email: email },
         });
 
         const role = response.data.replace('Tipo de usuário: ', '').trim();
@@ -37,25 +51,65 @@ const HomePage = () => {
     };
 
     fetchUserRole();
-  }, []);  // Dependência vazia para executar apenas uma vez
+  }, []);
 
   const onSubmit = (data) => {
     console.log(data);
+    handleClose(); // fecha o modal após o envio
   };
 
   return (
     <Container maxWidth="md" sx={{ paddingTop: 4 }}>
-      <Box sx={{ marginBottom: 4 }}>
-        {/* Verifica se o usuário é "master" para exibir o formulário */}
-        {userRole === 'master' && (
-          <PostForm 
-            register={register} 
-            handleSubmit={handleSubmit(onSubmit)} 
-            setValue={setValue} 
-          />
-        )}
-      </Box>
+      {/* Botão flutuante para abrir o modal */}
+      {userRole === 'master' && (
+        <Box sx={{ marginBottom: 4, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={handleOpen}
+            sx={{
+              color: '#ffffff',
+              backgroundColor: '#1D252E',
+              borderRadius: '12px', // <- Correto aqui
+              '&:hover': {
+                borderColor: '#1D252E',
+                backgroundColor: '#f5f5f5',
+                color: '#1D252E'
+              }
+            }}
+          >
+            Post
+          </Button>
 
+        </Box>
+      )}
+
+      {/* Modal com o formulário */}
+      <Modal open={open} onClose={handleClose}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: { xs: '90%', sm: 500 },
+            bgcolor: 'background.paper',
+            borderRadius: '20px',  // alterado para 20px
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+
+          <PostForm
+            register={register}
+            handleSubmit={handleSubmit(onSubmit)}
+            setValue={setValue}
+          />
+        </Box>
+      </Modal>
+
+
+      {/* Feed abaixo */}
       <Feed />
     </Container>
   );

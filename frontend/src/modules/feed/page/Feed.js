@@ -11,6 +11,8 @@ import { showSucessToast } from '../../../shared/components/toasters/SucessToast
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import {jwtDecode} from 'jwt-decode';
+
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
@@ -28,6 +30,8 @@ const Feed = () => {
   const [editCommentDialogOpen, setEditCommentDialogOpen] = useState(false);
   const [editCommentContent, setEditCommentContent] = useState('');
   const [selectedCommentId, setSelectedCommentId] = useState(null);
+  const [showAllComments, setShowAllComments] = useState(false);
+
 
   const handleEditComment = (comment, post) => {
     console.log("Editando comentário:", comment);
@@ -48,7 +52,7 @@ const Feed = () => {
     }
 
     try {
-      const currentUserEmail = getEmailFromCookies();
+      const currentUserEmail = getEmailFromToken();
       console.log("E-mail do usuário:", currentUserEmail);
 
       console.log("Enviando requisição PUT para editar comentário:", {
@@ -63,19 +67,12 @@ const Feed = () => {
         userEmail: currentUserEmail,
       });
 
-      console.log("Comentário atualizado na API. Atualizando localmente...");
-
       setComments((prevComments) => {
         const updatedComments = { ...prevComments };
         const postComments = updatedComments[selectedPost.ID];
-        console.log("Comentários antes da edição:", postComments);
-
         const updatedPostComments = postComments.map((comment) =>
           comment.id === selectedCommentId ? { ...comment, content: editCommentContent } : comment
         );
-
-        console.log("Comentários depois da edição:", updatedPostComments);
-
         updatedComments[selectedPost.ID] = updatedPostComments;
         return updatedComments;
       });
@@ -84,7 +81,17 @@ const Feed = () => {
       showSucessToast("Comentário atualizado com sucesso!");
     } catch (error) {
       console.error("Erro ao editar comentário:", error);
-      showErrorToast("Erro ao editar o comentário.");
+      if (
+        error.response &&
+        error.response.status === 400 &&
+        error.response.data &&
+        error.response.data.includes('palavras proibidas')
+      ) {
+        showErrorToast('Seu comentário contém palavras proibidas!');
+        setEditCommentContent(""); // Limpa o campo de edição
+      } else {
+        showErrorToast("Erro ao editar o comentário.");
+      }
     }
   };
 
@@ -94,10 +101,10 @@ const Feed = () => {
     console.log("Post relacionado:", post);
 
     try {
-      const email = getEmailFromCookies();
+      const email = getEmailFromToken();
       console.log("E-mail do usuário:", email);
       if (!email) {
-        console.warn("Nenhum e-mail encontrado nos cookies.");
+        console.warn("Nenhum e-mail encontrado no token.");
         return;
       }
 
@@ -131,8 +138,16 @@ const Feed = () => {
     }
   };
 
-  const getEmailFromCookies = () => {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)email\s*=\s*([^;]*).*$)|^.*$/, "$1");
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
   };
 
   const fetchPosts = async (isMountedRef) => {
@@ -140,8 +155,13 @@ const Feed = () => {
     setError(null);
     try {
       const response = await authService.get("posts");
+
+      // Adicione o console.log aqui para ver a resposta inteira:
+      console.log('fetchPosts response:', response);
+
       if (response.data && isMountedRef.current) {
         setPosts(response.data);
+
         for (const post of response.data) {
           await fetchComments(post.ID, isMountedRef);
         }
@@ -158,6 +178,7 @@ const Feed = () => {
       }
     }
   };
+
 
   const fetchComments = async (postId, isMountedRef) => {
     try {
@@ -177,7 +198,7 @@ const Feed = () => {
     const newComment = newComments[postId];
     if (!newComment) return;
 
-    const email = getEmailFromCookies();
+    const email = getEmailFromToken();
     if (!email) return;
 
     try {
@@ -185,7 +206,17 @@ const Feed = () => {
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
       await fetchComments(postId, { current: true }); // Força fetch sem desmontagem
     } catch (error) {
-      console.error("Erro ao criar comentário:", error);
+      if (
+        error.response &&
+        error.response.status === 400 &&
+        error.response.data &&
+        error.response.data.includes('palavras proibidas')
+      ) {
+        showErrorToast('Seu comentário contém palavras proibidas!');
+        setNewComments((prev) => ({ ...prev, [postId]: "" })); // Limpa o campo!
+      } else {
+        showErrorToast('Erro ao criar comentário.');
+      }
     }
   };
 
@@ -202,7 +233,7 @@ const Feed = () => {
   const handleToggleFixPost = async () => {
     if (!selectedPost) return;
 
-    const email = getEmailFromCookies();
+    const email = getEmailFromToken();
     if (!email) return;
 
     try {
@@ -237,46 +268,66 @@ const Feed = () => {
   };
 
   const handleSaveEditPost = async () => {
-    if (!selectedPost || !selectedPost.ID) {
-      console.log("ID da postagem inválido ou não encontrado!", selectedPost);
-      return;
-    }
-
-    console.log('Salvando edição...');
-
-    const formData = new FormData();
-    formData.append("post_id", selectedPost.ID.toString());
-    formData.append("title", editTitle);
-    formData.append("content", editContent);
-    formData.append("email", selectedPost.UserEmail); // precisa ter vindo no objeto selectedPost
-
-    try {
-      await authService.put("edit-post", formData);
-
-      // Atualiza a lista de posts localmente
-      setPosts((prevPosts) =>
-        prevPosts.map((p) =>
-          p.ID === selectedPost.ID
-            ? { ...p, Title: editTitle, Content: editContent }
-            : p
-        )
-      );
-
-      setEditDialogOpen(false);
-      setSnackbarMessage("Postagem atualizada!");
-      setSnackbarOpen(true);
-      showSucessToast("Postagem atualizada com sucesso!");
-
-    } catch (error) {
-      console.error("Erro ao editar a postagem:", error);
-      showErrorToast("Erro ao editar a postagem.");
-    }
-  };
+      if (!selectedPost || !selectedPost.ID) {
+        console.log("ID da postagem inválido ou não encontrado!", selectedPost);
+        return;
+      }
+  
+      console.log('Salvando edição...');
+  
+      const formData = new FormData();
+      formData.append("post_id", selectedPost.ID.toString());
+      formData.append("title", editTitle);
+      formData.append("content", editContent);
+      // Pegue o email do token
+      const email = getEmailFromToken();
+      formData.append("email", email);
+  
+      try {
+        await authService.put("anyUser/edit-post", formData);
+  
+        setPosts((prevPosts) =>
+          prevPosts.map((p) =>
+            p.ID === selectedPost.ID
+              ? { ...p, Title: editTitle, Content: editContent }
+              : p
+          )
+        );
+  
+        setEditDialogOpen(false);
+        setSnackbarMessage("Postagem atualizada!");
+        setSnackbarOpen(true);
+        showSucessToast("Postagem atualizada com sucesso!");
+      } catch (error) {
+        console.error("Erro ao editar a postagem:", error);
+  
+        if (error.response) {
+          const { status, data } = error.response;
+          let errorMsg = '';
+          if (typeof data === 'string') {
+            errorMsg = data;
+          } else if (typeof data === 'object' && data.error) {
+            errorMsg = data.error;
+          }
+  
+          if (
+            status === 400 &&
+            errorMsg &&
+            errorMsg.toLowerCase().includes('palavras proibidas')
+          ) {
+            showErrorToast('O título ou conteúdo contém palavras proibidas!');
+            return;
+          }
+        }
+  
+        showErrorToast("Erro ao editar a postagem.");
+      }
+    };
 
   const handleDeletePost = async () => {
     if (!selectedPost) return;
 
-    const email = getEmailFromCookies();
+    const email = getEmailFromToken();
     if (!email) return;
 
     try {
@@ -315,21 +366,48 @@ const Feed = () => {
   }, [selectedPost]);
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-      <Box sx={{ maxWidth: '800px', width: '100%' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px', width: '100%' }}>
+      <Box sx={{ width: '100%' }}>
         {loading ? (
           <div>Carregando postagens...</div>
         ) : error ? (
           <div>{error}</div>
         ) : posts.length > 0 ? (
           posts.map((post) => (
-            <Card key={post.ID} sx={{ marginBottom: '20px', borderRadius: '8px', boxShadow: 3 }}>
+            <Card
+              key={post.ID}
+              sx={{
+                marginBottom: '20px',
+                borderRadius: '15px',
+                boxShadow: '2px 2px 20px 1px rgba(0, 0, 0, 0.1)',
+                backgroundColor: 'white', // ou a cor que preferir
+                width: '100%',
+                height: 'max-content',
+                pt: '20px',
+                pb: '20px'
+              }}
+            >
+
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
                   <Avatar sx={{ marginRight: '12px' }} />
-                  <Typography variant="body2" color="textSecondary">
-                    {post.UserEmail || 'E-mail não disponível'}
-                  </Typography>
+
+                  {/* Box vertical para nome e email */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 'bold', color: '#1D252E' }}
+                    >
+                      {post.user_name || 'Nome não disponível'}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                    >
+                      {post.UserEmail || 'E-mail não disponível'}
+                    </Typography>
+                  </Box>
+
                   <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
                     {post.Pinned && <PushPinIcon fontSize="small" color="primary" sx={{ marginRight: '8px' }} />}
                     <IconButton onClick={(e) => handleClickMenu(e, post)}>
@@ -337,17 +415,18 @@ const Feed = () => {
                     </IconButton>
                   </Box>
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                  {post.Title}
-                </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ marginBottom: '16px' }}>
-                  #{post.ID}
-                </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ marginBottom: '16px' }}>
-                  {post.Content}
-                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', marginBottom: '16px' }}>
+                  <Typography sx={{ fontWeight: 'bold' }}>
+                    {post.Title}
+                  </Typography>
+                  <Typography color="textSecondary">
+                    {post.Content}
+                  </Typography>
+                </Box>
+
                 {post.Image && (
-                  <Box sx={{ height: '300px', overflow: 'hidden', borderRadius: '8px' }}>
+                  <Box sx={{ height: '400px', overflow: 'hidden', borderRadius: '8px' }}>
                     <img
                       src={`data:image/png;base64,${post.Image}`}
                       alt="Imagem do post"
@@ -355,48 +434,189 @@ const Feed = () => {
                     />
                   </Box>
                 )}
-                <Box sx={{ marginTop: '16px' }}>
-                  <Typography variant="h6">Comentários</Typography>
+                <Box sx={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
                   {comments[post.ID]?.length > 0 ? (
-                    comments[post.ID].map((comment) => (
-                      <Box key={comment.id} sx={{ backgroundColor: '#f1f1f1', borderRadius: '8px', padding: '10px', marginTop: '8px' }}>
-                        <Typography variant="body2" fontWeight="bold">{comment.userName || 'Anônimo'}</Typography>
-                        <Typography variant="body2" color="textSecondary">{comment.userEmail}</Typography>
-                        <Typography variant="body2" color="textSecondary">{comment.content}</Typography>
+                    <>
+                      <Box
+                        sx={{
+                          maxHeight: showAllComments ? 'none' : '180px',
+                          overflowY: 'auto',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                          pr: 1,
+                        }}
+                      >
+                        {comments[post.ID]
+                          .slice(0, showAllComments ? comments[post.ID].length : 2)
+                          .map((comment) => (
+                            <Box
+                              key={comment.id}
+                              sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                gap: '16px',
+                              }}
+                            >
+                              {/* Lado esquerdo: avatar + conteúdo do comentário */}
+                              <Box sx={{ display: 'flex', flex: 1, gap: '12px' }}>
+                                <Avatar sx={{ width: 40, height: 40 }}>
+                                  {comment.userName?.[0]?.toUpperCase() || 'A'}
+                                </Avatar>
 
-                        {/* Botões de editar e excluir */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                          <IconButton onClick={() => handleEditComment(comment, post)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
+                                <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Typography variant="subtitle2" fontWeight="bold">
+                                      {comment.userName || 'Anônimo'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                                      {comment.date || '01/01/2023'}
+                                    </Typography>
+                                  </Box>
 
-                          <IconButton onClick={() => handleDeleteComment(comment.id, post)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
+                                  <Typography variant="body2" sx={{ marginTop: '4px' }}>
+                                    {comment.content}
+                                  </Typography>
+                                </Box>
+                              </Box>
+
+
+                              {/* Lado direito: botões */}
+                              <Box sx={{ display: 'flex', gap: '8px' }}>
+                                <Button
+                                  variant="text"
+                                  onClick={() => handleEditComment(comment, post)}
+                                  sx={{
+                                    minWidth: '40px',
+                                    '&:hover': {
+                                      backgroundColor: '#e0e0e0',
+                                    },
+                                  }}
+                                >
+                                  <EditIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
+                                </Button>
+
+                                <Button
+                                  variant="text"
+                                  onClick={() => handleDeleteComment(comment.id, post)}
+                                  sx={{
+                                    minWidth: '40px',
+                                    '&:hover': {
+                                      backgroundColor: '#e0e0e0',
+                                    },
+                                  }}
+                                >
+                                  <DeleteIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
+                                </Button>
+
+                              </Box>
+                            </Box>
+                          ))}
                       </Box>
-                    ))
+
+                      {/* Botão para visualizar todos */}
+                      {!showAllComments && comments[post.ID].length > 2 && (
+                        <Button
+                          variant="text"
+                          onClick={() => setShowAllComments((prev) => !prev)}
+                          sx={{
+                            marginTop: '8px',
+                            textTransform: 'none',
+                            color: '#1D252E',
+                            // fontWeight: 'bold',
+                            '&:hover': {
+                              backgroundColor: '#F4F6F8', // cinza claro no hover
+                            },
+                          }}
+                        >
+                          {showAllComments ? 'Visualizar menos' : 'Visualizar todos os comentários'}
+                        </Button>
+
+                      )}
+                    </>
                   ) : (
-                    <div>Não há comentários ainda.</div>
+                    <Typography variant="body2" color="text.secondary">
+                      Não há comentários ainda.
+                    </Typography>
                   )}
 
-                  <TextField
-                    label="Novo comentário"
-                    fullWidth
-                    variant="outlined"
-                    value={newComments[post.ID] || ''}
-                    onChange={(e) => setNewComments((prev) => ({ ...prev, [post.ID]: e.target.value }))}
-                    sx={{ marginTop: '8px' }}
-                  />
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleCommentSubmit(post.ID)}
-                    sx={{ marginTop: '8px' }}
-                  >
-                    Comentar
-                  </Button>
+                  {/* Campo de novo comentário */}
+                  <Box sx={{ display: 'flex', gap: 2, marginTop: '16px' }}>
+                    <TextField
+                      label="Escreva um comentário..."
+                      fullWidth
+                      variant="outlined"
+                      value={newComments[post.ID] || ''}
+                      onChange={(e) =>
+                        setNewComments((prev) => ({ ...prev, [post.ID]: e.target.value }))
+                      }
+                      sx={{
+                        color: '#D9D9D9',
+                        '& .MuiInputLabel-root': {
+                          top: '50%',
+                          transform: 'translate(14px, -50%) scale(1)',
+                          color: '#D9D9D9',                // cor do label normal
+                          transition: 'color 0.3s',
+                        },
+                        '& .MuiOutlinedInput-root': {
+                          padding: '4px',
+                          fontSize: '0.9rem',
+                          color: '#D9D9D9',                // cor do texto normal
+                          '& fieldset': {
+                            color: '#1D252E',
+                            borderColor: '#D9D9D9',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#B0B0B0',
+                            color: '#1D252E',
+
+                          },
+                          '&.Mui-focused': {
+                            color: '#1D252E',              // cor do texto quando focado
+                            '& fieldset': {
+                              borderColor: '#1D252E',
+                              borderWidth: 2,
+                              color: '#1D252E',
+                            },
+                          },
+                        },
+                        '& .MuiOutlinedInput-input': {
+                          padding: '6px 8px',
+                        },
+                        '& .MuiInputLabel-shrink': {
+                          transform: 'translate(14px, -30px) scale(0.75)',
+                          color: '#1D252E',                // cor do label quando shrink (ativo)
+                        },
+                      }}
+
+
+                    />
+
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleCommentSubmit(post.ID)}
+                      sx={{
+                        minWidth: '120px',
+                        color: '#1D252E',
+                        borderColor: '#1D252E',
+                        borderRadius: '12px', // <- Correto aqui
+                        '&:hover': {
+                          borderColor: '#1D252E',
+                          backgroundColor: '#f5f5f5',
+                          color: '#1D252E'
+                        }
+                      }}
+                    >
+                      Comentar
+                    </Button>
+
+                  </Box>
+
                 </Box>
+
+
+
               </CardContent>
             </Card>
           ))

@@ -4,9 +4,11 @@ import { useForm } from 'react-hook-form';
 import { postService } from '../../../services/PostService';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
-import Cookies from 'js-cookie';
 
-const PostagemForm = ({ onPostCreated }) => {
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+
+const PostagemForm = ({ onPostCreated, onClose }) => {
   const { register, handleSubmit, reset } = useForm();
   const [image, setImage] = useState(null);
 
@@ -29,43 +31,60 @@ const PostagemForm = ({ onPostCreated }) => {
     event.preventDefault();
   };
 
+  const handleClose = () => {
+    reset();
+    setImage(null);
+    if (onClose) onClose();
+  };
+
   const onSubmit = async (data) => {
     try {
-      const email = Cookies.get('email');
-
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('content', data.content);
       formData.append('image', image);
-      formData.append('email', email);
 
       const response = await postService.createPost(formData);
 
       if (response.status === 201) {
-        showSucessToast("Postagem criada com sucesso!");
+        showSucessToast('Postagem criada com sucesso!');
         reset();
         setImage(null);
-
         if (onPostCreated) {
           onPostCreated();
         }
-
+        if (onClose) {
+          onClose();
+        }
         return;
       } else {
-        showErrorToast("Erro ao criar postagem.");
+        showErrorToast('Erro ao criar postagem.');
       }
     } catch (error) {
-      console.error("Erro ao criar postagem:", error);
+      console.error('Erro ao criar postagem:', error);
       if (!error.response) {
-        showErrorToast("Erro de rede. Tente novamente.");
+        showErrorToast('Erro de rede. Tente novamente.');
         return;
       }
 
-      const { status } = error.response;
-      if (status === 400) {
-        showErrorToast("Erro nos dados fornecidos.");
+      const { status, data } = error.response;
+      let errorMsg = '';
+      if (typeof data === 'string') {
+        errorMsg = data;
+      } else if (typeof data === 'object' && data.error) {
+        errorMsg = data.error;
+      }
+
+      if (
+        status === 400 &&
+        errorMsg &&
+        errorMsg.toLowerCase().includes('palavras proibidas')
+      ) {
+        showErrorToast('O título ou conteúdo contém palavras proibidas!');
+      } else if (status === 400) {
+        showErrorToast('Erro nos dados fornecidos.');
       } else {
-        showErrorToast("Erro ao criar postagem.");
+        showErrorToast('Erro ao criar postagem.');
       }
     }
   };
@@ -76,22 +95,24 @@ const PostagemForm = ({ onPostCreated }) => {
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 2,
+          alignItems: 'start',
           maxWidth: '600px',
           margin: 'auto',
-          padding: 4,
-          boxShadow: 3,
-          borderRadius: 2,
           backgroundColor: 'white',
+          boxShadow: '0',
+          p: 3,
+          borderRadius: '12px',
         }}
       >
-        <Typography variant="h5" sx={{ textAlign: 'center', marginBottom: 3 }}>
-          Criar Postagem
+        <Typography
+          sx={{ textAlign: 'center', marginBottom: 3, fontWeight: 'bold', color: '#1C252E', width: '100%' }}
+        >
+          Postagem
         </Typography>
 
         <TextField
           {...register('title')}
-          label="Título da Postagem"
+          label="Título"
           variant="outlined"
           fullWidth
           required
@@ -100,7 +121,7 @@ const PostagemForm = ({ onPostCreated }) => {
 
         <TextField
           {...register('content')}
-          label="Conteúdo da Postagem"
+          label="Descrição"
           variant="outlined"
           multiline
           rows={4}
@@ -109,7 +130,7 @@ const PostagemForm = ({ onPostCreated }) => {
           sx={{ marginBottom: 2 }}
         />
 
-        <FormControl sx={{ marginBottom: 2, position: 'relative' }}>
+        <FormControl sx={{ marginBottom: 2, position: 'relative', width: '100%' }}>
           <Box
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -149,23 +170,50 @@ const PostagemForm = ({ onPostCreated }) => {
           )}
         </FormControl>
 
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{
-            marginTop: 2,
-            padding: '12px',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            '&:hover': {
-              backgroundColor: '#1976d2',
-            },
-          }}
-        >
-          Criar Postagem
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, marginTop: 2, width: '100%' }}>
+          {/* Botão Postar */}
+          <Button
+            type="submit"
+            variant="contained"
+            startIcon={<CheckIcon sx={{ color: '#fff' }} />}
+            sx={{
+              backgroundColor: '#1C252E',
+              color: '#fff',
+              flex: 1,
+              padding: '8px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              borderRadius: '12px',
+              '&:hover': {
+                backgroundColor: '#172027',
+              },
+            }}
+          >
+            Postar
+          </Button>
+
+          {/* Botão Cancelar */}
+          <Button
+            variant="outlined"
+            startIcon={<CloseIcon sx={{ color: '#657381' }} />}
+            onClick={handleClose}
+            sx={{
+              borderColor: '#657381',
+              color: '#657381',
+              flex: 1,
+              padding: '8px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              borderRadius: '12px',
+              '&:hover': {
+                backgroundColor: '#f5f5f5',
+                borderColor: '#657381',
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+        </Box>
       </Box>
     </form>
   );

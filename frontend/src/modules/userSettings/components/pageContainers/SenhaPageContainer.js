@@ -6,26 +6,38 @@ import { Box } from '@mui/system';
 import { authService } from '../../../../services/AuthService';
 import { showErrorToast } from "../../../../shared/components/toasters/ErrorToaster";
 import { showSucessToast } from "../../../../shared/components/toasters/SucessToaster";
-import Cookies from 'js-cookie';
+import { jwtDecode} from "jwt-decode";
 
 function SenhaPageContainer() {
     const { register, handleSubmit } = useForm();
 
+    // Função para pegar o email do token
+    const getEmailFromToken = () => {
+        const token = localStorage.getItem('token');
+        if (!token) return null;
+        try {
+            const decoded = jwtDecode(token);
+            return decoded.email || null;
+        } catch {
+            return null;
+        }
+    };
+
     const onSubmit = async (data) => {
         try {
-            const userEmail = Cookies.get('email');
-    
+            const userEmail = getEmailFromToken();
+
             if (!userEmail) {
-                showErrorToast("Usuário não encontrado nos cookies");
+                showErrorToast("Usuário não encontrado no token");
                 return;
             }
-    
+
             const response = await authService.post("senhaPage", { 
                 email: userEmail, 
                 password: data.senhaAtual, 
                 newPassword: data.novaSenha 
             });
-    
+
             if (response.status === 200) {
                 showSucessToast("Senha salva com sucesso!");
             } else if (response.status === 401) {

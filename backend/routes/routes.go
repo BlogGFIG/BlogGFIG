@@ -1,18 +1,19 @@
 package routes
 
 import (
-	"os"
+	"net/http"
 
 	"github.com/BlogGFIG/BlogGFIG/controllers"
 	"github.com/BlogGFIG/BlogGFIG/middlewares"
+
 	//"github.com/go-playground/locales/mas"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 // HandleRequest configura todas as rotas do servidor
-func HandleRequest() *mux.Router {
-	
+func HandleRequest() http.Handler {
+
 	// Rota acessível para usuários não autenticados
 	r := mux.NewRouter()
 
@@ -21,8 +22,8 @@ func HandleRequest() *mux.Router {
 	masterRoutes.Use(middlewares.Authorize("master"))
 
 	// Rota acessível apenas para o administrador
-    adminRoutes := r.PathPrefix("/admin").Subrouter()
-    adminRoutes.Use(middlewares.Authorize("admin", "master"))
+	adminRoutes := r.PathPrefix("/admin").Subrouter()
+	adminRoutes.Use(middlewares.Authorize("admin", "master"))
 
 	// Rota acessível para qualquer usuário autênticado (master, admin ou user)
 	anyUserRoutes := r.PathPrefix("/anyUser").Subrouter()
@@ -96,15 +97,15 @@ func HandleRequest() *mux.Router {
 
 	// Configuração do CORS
 	corsHandler := handlers.CORS(
-		// Permite a origem específica, e permite credenciais (cookies, cabeçalhos)
+		// Permite a origem específica, e permite credenciais (cabeçalhos)
 		handlers.AllowedOrigins([]string{
-			os.Getenv("FRONTEND_ORIGIN"), // ex: https://meu-frontend.onrender.com - Render
-			"http://localhost:3000",      // para testes locais
+			"https://frontend-gfig.onrender.com", // ex: https://meu-frontend.onrender.com - Render
+			"http://localhost:3000",              // para testes locais
 		}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
+		handlers.AllowCredentials(), // Permite o envio de credenciais ()
 	)
 
-	return corsHandler(r).(*mux.Router) // Retorna o roteador com CORS configurado para o main
+	return corsHandler(r) // Retorna o roteador com CORS configurado para o main
 }
