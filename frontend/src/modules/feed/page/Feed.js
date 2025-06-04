@@ -478,15 +478,17 @@ const Feed = () => {
                   </Typography>
                 </Box>
 
-                {post.Image && (
-                  <Box sx={{ height: '400px', overflow: 'hidden', borderRadius: '8px' }}>
-                    <img
-                      src={`data:image/png;base64,${post.Image}`}
-                      alt="Imagem do post"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </Box>
-                )}
+                {post.Image &&
+  post.Image.trim() !== "" &&
+  post.Image !== "TlVMTA==" && ( // "TlVMTA==" é "NULL" em base64
+  <Box sx={{ height: '400px', overflow: 'hidden', borderRadius: '8px' }}>
+    <img
+      src={`data:image/png;base64,${post.Image}`}
+      alt="Imagem do post"
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  </Box>
+)}
                 <Box sx={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
                   {comments[post.ID]?.length > 0 ? (
                     <>
