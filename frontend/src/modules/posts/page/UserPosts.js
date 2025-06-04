@@ -116,7 +116,7 @@ const UserPosts = () => {
     formData.append("email", email);
 
     try {
-      await authService.put("edit-post", formData);
+      await authService.put("anyUser/edit-post", formData);
 
       setPosts((prevPosts) =>
         prevPosts.map((p) =>
@@ -132,6 +132,26 @@ const UserPosts = () => {
       showSucessToast("Postagem atualizada com sucesso!");
     } catch (error) {
       console.error("Erro ao editar a postagem:", error);
+
+      if (error.response) {
+        const { status, data } = error.response;
+        let errorMsg = '';
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (typeof data === 'object' && data.error) {
+          errorMsg = data.error;
+        }
+
+        if (
+          status === 400 &&
+          errorMsg &&
+          errorMsg.toLowerCase().includes('palavras proibidas')
+        ) {
+          showErrorToast('O título ou conteúdo contém palavras proibidas!');
+          return;
+        }
+      }
+
       showErrorToast("Erro ao editar a postagem.");
     }
   };

@@ -268,53 +268,61 @@ const Feed = () => {
   };
 
   const handleSaveEditPost = async () => {
-    if (!selectedPost || !selectedPost.ID) {
-      console.log("ID da postagem inválido ou não encontrado!", selectedPost);
-      return;
-    }
-
-    console.log('Salvando edição...');
-
-    const formData = new FormData();
-    formData.append("post_id", selectedPost.ID.toString());
-    formData.append("title", editTitle);
-    formData.append("content", editContent);
-    // Pegue o email do token
-    const email = getEmailFromToken();
-    formData.append("email", email);
-
-    try {
-      await authService.put("edit-post", formData);
-
-      setPosts((prevPosts) =>
-        prevPosts.map((p) =>
-          p.ID === selectedPost.ID
-            ? { ...p, Title: editTitle, Content: editContent }
-            : p
-        )
-      );
-
-      setEditDialogOpen(false);
-      setSnackbarMessage("Postagem atualizada!");
-      setSnackbarOpen(true);
-      showSucessToast("Postagem atualizada com sucesso!");
-
-    } catch (error) {
-      console.error("Erro ao editar a postagem:", error);
-      if (
-        error.response &&
-        error.response.status === 400 &&
-        error.response.data &&
-        error.response.data.includes('palavras proibidas')
-      ) {
-        showErrorToast('O título ou conteúdo contém palavras proibidas!');
-        setEditTitle('');
-        setEditContent('');
-      } else {
+      if (!selectedPost || !selectedPost.ID) {
+        console.log("ID da postagem inválido ou não encontrado!", selectedPost);
+        return;
+      }
+  
+      console.log('Salvando edição...');
+  
+      const formData = new FormData();
+      formData.append("post_id", selectedPost.ID.toString());
+      formData.append("title", editTitle);
+      formData.append("content", editContent);
+      // Pegue o email do token
+      const email = getEmailFromToken();
+      formData.append("email", email);
+  
+      try {
+        await authService.put("anyUser/edit-post", formData);
+  
+        setPosts((prevPosts) =>
+          prevPosts.map((p) =>
+            p.ID === selectedPost.ID
+              ? { ...p, Title: editTitle, Content: editContent }
+              : p
+          )
+        );
+  
+        setEditDialogOpen(false);
+        setSnackbarMessage("Postagem atualizada!");
+        setSnackbarOpen(true);
+        showSucessToast("Postagem atualizada com sucesso!");
+      } catch (error) {
+        console.error("Erro ao editar a postagem:", error);
+  
+        if (error.response) {
+          const { status, data } = error.response;
+          let errorMsg = '';
+          if (typeof data === 'string') {
+            errorMsg = data;
+          } else if (typeof data === 'object' && data.error) {
+            errorMsg = data.error;
+          }
+  
+          if (
+            status === 400 &&
+            errorMsg &&
+            errorMsg.toLowerCase().includes('palavras proibidas')
+          ) {
+            showErrorToast('O título ou conteúdo contém palavras proibidas!');
+            return;
+          }
+        }
+  
         showErrorToast("Erro ao editar a postagem.");
       }
-    }
-  };
+    };
 
   const handleDeletePost = async () => {
     if (!selectedPost) return;
