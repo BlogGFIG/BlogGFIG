@@ -39,7 +39,6 @@ const PostagemForm = ({ onPostCreated, onClose }) => {
 
   const onSubmit = async (data) => {
     try {
-
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('content', data.content);
@@ -68,8 +67,21 @@ const PostagemForm = ({ onPostCreated, onClose }) => {
         return;
       }
 
-      const { status } = error.response;
-      if (status === 400) {
+      const { status, data } = error.response;
+      let errorMsg = '';
+      if (typeof data === 'string') {
+        errorMsg = data;
+      } else if (typeof data === 'object' && data.error) {
+        errorMsg = data.error;
+      }
+
+      if (
+        status === 400 &&
+        errorMsg &&
+        errorMsg.toLowerCase().includes('palavras proibidas')
+      ) {
+        showErrorToast('O título ou conteúdo contém palavras proibidas!');
+      } else if (status === 400) {
         showErrorToast('Erro nos dados fornecidos.');
       } else {
         showErrorToast('Erro ao criar postagem.');
