@@ -5,6 +5,7 @@ import { PageContainer } from '@toolpad/core/PageContainer';
 import PasswordIcon from '@mui/icons-material/Password';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AlteracaoDeSenhaPageContainer from '../pageContainers/AlteracaoDeSenhaPageContainer';
+import DeletarContaPageContainer from '../pageContainers/DeletarContaPageContainer';
 
 const NAVIGATION = [
   {
@@ -49,7 +50,7 @@ export default function SettingsDrawer(props) {
       CurrentComponent = AlteracaoDeSenhaPageContainer;
       break;
     case 'deletarConta':
-      CurrentComponent = () => <div>Componente de deletar conta</div>;
+      CurrentComponent = DeletarContaPageContainer;
       break;
     default:
       CurrentComponent = () => <div>Selecione uma opção.</div>;

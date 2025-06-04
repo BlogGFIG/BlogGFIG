@@ -618,3 +618,81 @@ func GetUserTypeByToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("Tipo de usuário: %s", userType)))
 }
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Obtém o token do cabeçalho Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
+		return
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		http.Error(w, "Formato do token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	// Decodifica o token JWT
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte("bloggfig@2025"), nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Token inválido", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Erro ao extrair claims do token", http.StatusInternalServerError)
+		return
+	}
+
+	// Obtém o ID do usuário do token
+	userIdFromToken, ok := claims["userId"].(float64)
+	if !ok {
+		http.Error(w, "ID do usuário não encontrado no token", http.StatusInternalServerError)
+		return
+	}
+
+	// Recebe a senha do corpo da requisição
+	var reqData struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil || reqData.Password == "" {
+		http.Error(w, "Senha não fornecida", http.StatusBadRequest)
+		return
+	}
+
+	// Busca o usuário no banco de dados
+	var user models.User
+	result := dataBase.DB.First(&user, uint(userIdFromToken))
+	if result.Error == gorm.ErrRecordNotFound {
+		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+		return
+	}
+	if result.Error != nil {
+		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
+		return
+	}
+
+	// Verifica se a senha está correta
+	if user.Password != reqData.Password {
+		http.Error(w, "Senha incorreta", http.StatusUnauthorized)
+		return
+	}
+
+	// Deleta o usuário
+	deleteResult := dataBase.DB.Delete(&user)
+	if deleteResult.Error != nil {
+		http.Error(w, "Erro ao deletar usuário", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Usuário deletado com sucesso"))
+}

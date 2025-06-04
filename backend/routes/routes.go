@@ -95,6 +95,9 @@ func HandleRequest() http.Handler {
 	// Rota para desarquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
 	anyUserRoutes.HandleFunc("/unarchive-post", controllers.UnarchivePost).Methods("PUT")
 
+	// Rota para deletar um usuário (USUÁRIO AUTENTICADO) (DELETE)
+	anyUserRoutes.HandleFunc("/deleteUser", controllers.DeleteUser).Methods("DELETE")
+
 	// Configuração do CORS
 	corsHandler := handlers.CORS(
 		// Permite a origem específica, e permite credenciais (cabeçalhos)
