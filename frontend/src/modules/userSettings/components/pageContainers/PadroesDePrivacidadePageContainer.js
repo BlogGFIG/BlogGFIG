@@ -3,9 +3,8 @@ import { useForm, Controller } from "react-hook-form";
 import SubmitButton from '../../../../shared/components/buttons/SubmitButton';
 import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import { authService } from '../../../../services/AuthService';
-import { showErrorToast } from "../../../../shared/components/toasters/ErrorToaster";
 import { showSucessToast } from "../../../../shared/components/toasters/SucessToaster";
-import Cookies from 'js-cookie';
+import {jwtDecode} from 'jwt-decode';
 
 function FontePageContainer() {
   const { control, handleSubmit } = useForm();
@@ -23,8 +22,7 @@ function FontePageContainer() {
         console.error("Erro na requisição GET:", error);
 
         if (!error.response) {
-          showSucessToast("CConfigurações salvas!");
-
+          showSucessToast("Configurações salvas!");
           return;
         }
 
@@ -32,10 +30,8 @@ function FontePageContainer() {
 
         if (status === 404) {
           showSucessToast("Configurações salvas!");
-
         } else {
           showSucessToast("Configurações salvas!");
-
         }
       }
     };
@@ -43,12 +39,23 @@ function FontePageContainer() {
     fetchData();
   }, []);
 
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
+  };
+
   const onSubmit = async (data) => {
     try {
-      const userEmail = Cookies.get('email');
+      const userEmail = getEmailFromToken();
       if (!userEmail) {
         showSucessToast("Configurações salvas!");
-
         return;
       }
 
@@ -75,13 +82,10 @@ function FontePageContainer() {
 
       if (status === 409) {
         showSucessToast("Configurações salvas!");
-
       } else if (status === 401) {
         showSucessToast("Configurações salvas!");
-
       } else {
         showSucessToast("Configurações salvas!");
-
       }
     }
   };

@@ -7,9 +7,7 @@ import { useForm } from "react-hook-form";
 import { authService } from '../../../../services/AuthService';
 import { showSucessToast } from '../../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../../shared/components/toasters/ErrorToaster';
-import Cookies from "js-cookie";
 import { useNavigate } from 'react-router-dom';
-
 
 const AuthForm = ({ isSignUp, setIsSignUp }) => {
   const { register, handleSubmit } = useForm();
@@ -33,8 +31,6 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
 
         if (response.status === 200) {
           showSucessToast("Login realizado com sucesso!");
-          Cookies.set("email", data.email, { expires: 7 });
-
           // Salva o token no localStorage
           if (response.data && response.data.token) {
             localStorage.setItem('token', response.data.token);
@@ -58,7 +54,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
         return;
       }
 
-      const { status, data } = error.response;
+      const { status } = error.response;
 
       if (status === 409) {
         showErrorToast("Este e-mail já está cadastrado.");

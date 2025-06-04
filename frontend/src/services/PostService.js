@@ -7,9 +7,11 @@ export const postService = {
   createPost: async (formData) => {
     try {
       console.log("Enviando dados para criar a postagem...");
-      const response = await axios.post(`${API_URL}/posts`, formData, {
+      const token = localStorage.getItem('token'); // Recupera o token do localStorage
+      const response = await axios.post(`${API_URL}/anyUser/create-post`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': token ? `Bearer ${token}` : '', // Adiciona o token no header
         },
       });
 
@@ -43,27 +45,4 @@ export const postService = {
       throw error; // Retorna o erro para ser tratado no front
     }
   },
-};
-
-// Exemplo de uso no componente de criação de postagens
-// ... dentro da função de envio do formulário:
-const handleCreatePost = async (formData) => {
-  try {
-    await postService.createPost(formData);
-    // Sucesso: prossiga normalmente
-  } catch (error) {
-    if (
-      error.response &&
-      error.response.status === 400 &&
-      error.response.data &&
-      error.response.data.includes('palavras proibidas')
-    ) {
-      showErrorToast('O título ou conteúdo contém palavras proibidas!');
-      // Limpe os campos do formulário se desejar
-      // setEditTitle('');
-      // setEditContent('');
-    } else {
-      showErrorToast('Erro ao criar a postagem.');
-    }
-  }
 };

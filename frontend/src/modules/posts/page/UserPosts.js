@@ -3,6 +3,7 @@ import { authService } from '../../../services/AuthService';
 import PostForm from '../../home/components/PostForm';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
+import {jwtDecode} from 'jwt-decode';
 
 import {
   Dialog,
@@ -44,6 +45,18 @@ const UserPosts = () => {
   const [orderBy, setOrderBy] = useState('Title');
   const [order, setOrder] = useState('asc');
 
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     fetch("http://localhost:8000/posts")
       .then((response) => response.json())
@@ -71,11 +84,9 @@ const UserPosts = () => {
 
   const handleDelete = (postID) => {
     if (window.confirm("Tem certeza que deseja excluir esta postagem?")) {
-      const email = getEmailFromCookies();
+      const email = getEmailFromToken();
 
-      authService.delete(`delete-post?post_id=${postID}&email=${email}`, {
-        withCredentials: true
-      })
+      authService.delete(`delete-post?post_id=${postID}&email=${email}`)
         .then((response) => {
           console.log("Postagem deletada:", response);
           setPosts(posts.filter((post) => post.ID !== postID));
@@ -100,7 +111,9 @@ const UserPosts = () => {
     formData.append("post_id", selectedPost.ID.toString());
     formData.append("title", editTitle);
     formData.append("content", editContent);
-    formData.append("email", selectedPost.UserEmail);
+    // Pegue o email do token
+    const email = getEmailFromToken();
+    formData.append("email", email);
 
     try {
       await authService.put("edit-post", formData);
@@ -121,10 +134,6 @@ const UserPosts = () => {
       console.error("Erro ao editar a postagem:", error);
       showErrorToast("Erro ao editar a postagem.");
     }
-  };
-
-  const getEmailFromCookies = () => {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)email\s*=\s*([^;]*).*$)|^.*$/, "$1");
   };
 
   const handlePostCreated = () => {

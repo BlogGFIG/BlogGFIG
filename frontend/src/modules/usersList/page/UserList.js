@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Cookies from 'js-cookie';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Select, MenuItem, FormControl, InputLabel, Paper, Box } from '@mui/material';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
@@ -61,10 +60,22 @@ const UserList = () => {
     );
   }
 
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
+  };
+
   const handleToggleUserStatus = (userId, currentStatus) => {
-    const requesterEmail = Cookies.get('email');
+    const requesterEmail = getEmailFromToken();
     if (!requesterEmail) {
-      alert('E-mail do usuário não encontrado nos cookies.');
+      alert('E-mail do usuário não encontrado no token.');
       return;
     }
 
@@ -214,15 +225,18 @@ const UserList = () => {
                   </TableCell>
                   <TableCell>
                     <Button
-                      size="small"
                       variant="contained"
-                      color="primary"
+                      color={user.status === "ativo" ? "secondary" : "primary"}
+                      onClick={() => handleToggleUserStatus(user.id, user.status)}
+                      disabled={user.user_type === "master" && user.email === loggedUserEmail}
+                    >
+                      {user.status === "ativo" ? "Inativar" : "Ativar"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      sx={{ ml: 1 }}
                       onClick={() => handleSaveUserRole(user.id, user.user_type)}
-                      sx={{ marginLeft: 1 }}
-                      disabled={
-                        user.user_type === "master" &&
-                        user.email === loggedUserEmail
-                      }
+                      disabled={user.user_type === "master" && user.email === loggedUserEmail}
                     >
                       Salvar
                     </Button>

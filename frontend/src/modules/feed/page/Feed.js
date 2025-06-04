@@ -11,6 +11,7 @@ import { showSucessToast } from '../../../shared/components/toasters/SucessToast
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import {jwtDecode} from 'jwt-decode';
 
 
 const Feed = () => {
@@ -51,7 +52,7 @@ const Feed = () => {
     }
 
     try {
-      const currentUserEmail = getEmailFromCookies();
+      const currentUserEmail = getEmailFromToken();
       console.log("E-mail do usuário:", currentUserEmail);
 
       console.log("Enviando requisição PUT para editar comentário:", {
@@ -100,10 +101,10 @@ const Feed = () => {
     console.log("Post relacionado:", post);
 
     try {
-      const email = getEmailFromCookies();
+      const email = getEmailFromToken();
       console.log("E-mail do usuário:", email);
       if (!email) {
-        console.warn("Nenhum e-mail encontrado nos cookies.");
+        console.warn("Nenhum e-mail encontrado no token.");
         return;
       }
 
@@ -137,8 +138,16 @@ const Feed = () => {
     }
   };
 
-  const getEmailFromCookies = () => {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)email\s*=\s*([^;]*).*$)|^.*$/, "$1");
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
   };
 
   const fetchPosts = async (isMountedRef) => {
@@ -189,7 +198,7 @@ const Feed = () => {
     const newComment = newComments[postId];
     if (!newComment) return;
 
-    const email = getEmailFromCookies();
+    const email = getEmailFromToken();
     if (!email) return;
 
     try {
@@ -224,7 +233,7 @@ const Feed = () => {
   const handleToggleFixPost = async () => {
     if (!selectedPost) return;
 
-    const email = getEmailFromCookies();
+    const email = getEmailFromToken();
     if (!email) return;
 
     try {
@@ -270,7 +279,9 @@ const Feed = () => {
     formData.append("post_id", selectedPost.ID.toString());
     formData.append("title", editTitle);
     formData.append("content", editContent);
-    formData.append("email", selectedPost.UserEmail);
+    // Pegue o email do token
+    const email = getEmailFromToken();
+    formData.append("email", email);
 
     try {
       await authService.put("edit-post", formData);
@@ -308,7 +319,7 @@ const Feed = () => {
   const handleDeletePost = async () => {
     if (!selectedPost) return;
 
-    const email = getEmailFromCookies();
+    const email = getEmailFromToken();
     if (!email) return;
 
     try {

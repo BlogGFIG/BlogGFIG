@@ -2,10 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   Box,
   Container,
-  Typography,
   Modal,
-  Button,
-  Stack
+  Button
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import PostForm from '../components/PostForm';

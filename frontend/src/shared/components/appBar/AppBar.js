@@ -18,24 +18,11 @@ const adminSettings = ['Aprovar inscrição', 'Gerenciar postagens', 'Sair'];
 const userSettings = ['Sair'];
 const unauthenticatedSettings = ['Entrar'];
 
-function clearCookies() {
-  document.cookie.split(";").forEach(function (c) {
-    document.cookie = c
-      .replace(/^ +/, "")
-      .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-  });
-}
-
 function ResponsiveAppBar() {
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [userRole, setUserRole] = React.useState('');
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const navigate = useNavigate();
-
-  const getEmailFromCookie = () => {
-    const cookie = document.cookie.split('; ').find(row => row.startsWith('email='));
-    return cookie ? cookie.split('=')[1] : null;
-  };
 
   React.useEffect(() => {
     const token = localStorage.getItem('token');
@@ -45,11 +32,7 @@ function ResponsiveAppBar() {
 
     const fetchUserRole = async () => {
       try {
-        const email = getEmailFromCookie();
-        if (!email) return;
-
         const response = await axios.get('http://localhost:8000/get-user-type', {
-          params: { email },
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -78,6 +61,13 @@ function ResponsiveAppBar() {
     if (userRole === 'admin') return adminSettings;
     if (userRole === 'user') return userSettings;
     return [];
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+    setUserRole('');
+    navigate('/login');
   };
 
   return (
@@ -124,9 +114,15 @@ function ResponsiveAppBar() {
             <Menu
               sx={{ mt: '45px' }}
               anchorEl={anchorElUser}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
               keepMounted
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
               open={Boolean(anchorElUser)}
               onClose={handleCloseUserMenu}
             >
@@ -146,9 +142,7 @@ function ResponsiveAppBar() {
                     onClick={() => {
                       handleCloseUserMenu();
                       if (setting === 'Sair') {
-                        localStorage.removeItem('token');
-                        clearCookies();
-                        navigate('/login');
+                        handleLogout();
                       } else if (setting === 'Aprovar inscrição') {
                         navigate('/UserActiveList');
                       } else if (setting === 'Alterar níveis de permissão') {

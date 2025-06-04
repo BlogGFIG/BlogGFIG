@@ -97,14 +97,14 @@ func HandleRequest() http.Handler {
 
 	// Configuração do CORS
 	corsHandler := handlers.CORS(
-		// Permite a origem específica, e permite credenciais (cookies, cabeçalhos)
+		// Permite a origem específica, e permite credenciais (cabeçalhos)
 		handlers.AllowedOrigins([]string{
 			"https://frontend-gfig.onrender.com", // ex: https://meu-frontend.onrender.com - Render
 			"http://localhost:3000",              // para testes locais
 		}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-		handlers.AllowCredentials(), // Permite o envio de credenciais (cookies)
+		handlers.AllowCredentials(), // Permite o envio de credenciais ()
 	)
 
 	return corsHandler(r) // Retorna o roteador com CORS configurado para o main
