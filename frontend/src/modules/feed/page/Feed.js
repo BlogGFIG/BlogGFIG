@@ -13,6 +13,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { jwtDecode } from 'jwt-decode';
 
+function parseUTCDate(dateString) {
+  // Se já for ISO, retorna direto
+  if (!dateString) return null;
+  if (dateString.includes('T')) return new Date(dateString);
+  // Se vier como "2025-06-04 17:23:00", transforma em "2025-06-04T17:23:00Z"
+  return new Date(dateString.replace(' ', 'T') + 'Z');
+}
+
 const token = localStorage.getItem('token');
 if (token) {
   try {
@@ -194,10 +202,10 @@ const Feed = () => {
     setError(null);
     try {
       const response = await authService.get("posts");
+      console.log("POSTS RECEBIDOS:", response.data); // <-- Adicione isto
 
       if (response.data && isMountedRef.current) {
         setPosts(response.data);
-
         for (const post of response.data) {
           await fetchComments(post.ID, isMountedRef);
         }
@@ -322,7 +330,9 @@ const Feed = () => {
         console.log("ID da postagem inválido ou não encontrado!", selectedPost);
         return;
       }
-  
+    
+      handleCloseMenu();
+    
       console.log('Salvando edição...');
   
       const formData = new FormData();
@@ -348,6 +358,7 @@ const Feed = () => {
         setSnackbarMessage("Postagem atualizada!");
         setSnackbarOpen(true);
         showSucessToast("Postagem atualizada com sucesso!");
+        await fetchPosts({ current: true });
       } catch (error) {
         console.error("Erro ao editar a postagem:", error);
   
@@ -472,6 +483,16 @@ const Feed = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', marginBottom: '16px' }}>
                   <Typography sx={{ fontWeight: 'bold' }}>
                     {post.Title}
+                  </Typography>
+                  {/* Data de criação ou edição */}
+                  <Typography variant="caption" color="text.secondary" sx={{ marginBottom: '4px' }}>
+                    {post.updated_br && post.updated_br !== post.created_br ? (
+                      <>
+                        {post.updated_br} <b>E</b>
+                      </>
+                    ) : (
+                      post.created_br
+                    )}
                   </Typography>
                   <Typography color="textSecondary">
                     {post.Content}

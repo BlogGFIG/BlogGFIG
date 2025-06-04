@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
@@ -139,11 +140,19 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 func GetPosts(w http.ResponseWriter, r *http.Request) {
 	type PostWithUser struct {
 		models.Post
-		UserName string `json:"user_name"`
+		UserName  string    `json:"user_name"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+	}
+
+	type PostResponse struct {
+		models.Post
+		UserName  string `json:"user_name"`
+		CreatedBR string `json:"created_br"`
+		UpdatedBR string `json:"updated_br"`
 	}
 
 	var postsWithUsers []PostWithUser
-
 	result := dataBase.DB.Table("posts").
 		Select("posts.*, users.name as user_name").
 		Joins("inner join users on users.id = posts.user_id").
@@ -156,8 +165,19 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Monta a resposta já formatada
+	var postsResponse []PostResponse
+	for _, post := range postsWithUsers {
+		postsResponse = append(postsResponse, PostResponse{
+			Post:      post.Post,
+			UserName:  post.UserName,
+			CreatedBR: post.CreatedAt.Format("02/01/2006 15:04:05"),
+			UpdatedBR: post.UpdatedAt.Format("02/01/2006 15:04:05"),
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(postsWithUsers)
+	json.NewEncoder(w).Encode(postsResponse)
 }
 
 // EditPost: Função para editar uma postagem existente
@@ -243,6 +263,7 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		defer imageFile.Close()
 	}
 
+	post.UpdatedAt = time.Now().UTC()
 	result = dataBase.DB.Save(&post)
 	if result.Error != nil {
 		http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
