@@ -12,6 +12,7 @@ import PostForm from '../components/PostForm';
 import Feed from '../../feed/page/Feed';
 import axios from 'axios';
 import AddIcon from '@mui/icons-material/Add';
+import { jwtDecode } from 'jwt-decode';
 
 const HomePage = () => {
   const { register, handleSubmit, setValue } = useForm();
@@ -24,13 +25,18 @@ const HomePage = () => {
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
-        const getEmailFromCookies = () => {
-          return document.cookie.replace(/(?:(?:^|.*;\s*)email\s*=\s*([^;]*).*$)|^.*$/, "$1");
-        };
+        // Pegue o token do localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.warn("Token não encontrado no localStorage.");
+          return;
+        }
 
-        const email = getEmailFromCookies();
+        // Decodifique o token para obter o e-mail
+        const decoded = jwtDecode(token);
+        const email = decoded.email;
         if (!email) {
-          console.warn("E-mail não encontrado nos cookies.");
+          console.warn("E-mail não encontrado no token.");
           return;
         }
 
