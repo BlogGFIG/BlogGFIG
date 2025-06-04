@@ -66,19 +66,12 @@ const Feed = () => {
         userEmail: currentUserEmail,
       });
 
-      console.log("Comentário atualizado na API. Atualizando localmente...");
-
       setComments((prevComments) => {
         const updatedComments = { ...prevComments };
         const postComments = updatedComments[selectedPost.ID];
-        console.log("Comentários antes da edição:", postComments);
-
         const updatedPostComments = postComments.map((comment) =>
           comment.id === selectedCommentId ? { ...comment, content: editCommentContent } : comment
         );
-
-        console.log("Comentários depois da edição:", updatedPostComments);
-
         updatedComments[selectedPost.ID] = updatedPostComments;
         return updatedComments;
       });
@@ -87,7 +80,17 @@ const Feed = () => {
       showSucessToast("Comentário atualizado com sucesso!");
     } catch (error) {
       console.error("Erro ao editar comentário:", error);
-      showErrorToast("Erro ao editar o comentário.");
+      if (
+        error.response &&
+        error.response.status === 400 &&
+        error.response.data &&
+        error.response.data.includes('palavras proibidas')
+      ) {
+        showErrorToast('Seu comentário contém palavras proibidas!');
+        setEditCommentContent(""); // Limpa o campo de edição
+      } else {
+        showErrorToast("Erro ao editar o comentário.");
+      }
     }
   };
 
@@ -201,6 +204,7 @@ const Feed = () => {
         error.response.data.includes('palavras proibidas')
       ) {
         showErrorToast('Seu comentário contém palavras proibidas!');
+        setNewComments((prev) => ({ ...prev, [postId]: "" })); // Limpa o campo!
       } else {
         showErrorToast('Erro ao criar comentário.');
       }
@@ -266,12 +270,11 @@ const Feed = () => {
     formData.append("post_id", selectedPost.ID.toString());
     formData.append("title", editTitle);
     formData.append("content", editContent);
-    formData.append("email", selectedPost.UserEmail); // precisa ter vindo no objeto selectedPost
+    formData.append("email", selectedPost.UserEmail);
 
     try {
       await authService.put("edit-post", formData);
 
-      // Atualiza a lista de posts localmente
       setPosts((prevPosts) =>
         prevPosts.map((p) =>
           p.ID === selectedPost.ID
@@ -287,7 +290,18 @@ const Feed = () => {
 
     } catch (error) {
       console.error("Erro ao editar a postagem:", error);
-      showErrorToast("Erro ao editar a postagem.");
+      if (
+        error.response &&
+        error.response.status === 400 &&
+        error.response.data &&
+        error.response.data.includes('palavras proibidas')
+      ) {
+        showErrorToast('O título ou conteúdo contém palavras proibidas!');
+        setEditTitle('');
+        setEditContent('');
+      } else {
+        showErrorToast("Erro ao editar a postagem.");
+      }
     }
   };
 
