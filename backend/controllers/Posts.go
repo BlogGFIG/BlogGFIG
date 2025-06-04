@@ -284,7 +284,7 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validando se o usuário pode deletar a postagem
-	if post.UserID != user.ID && user.UserType != "admin" {
+	if post.UserID != user.ID && user.UserType != "admin" && user.UserType != "master" {
 		http.Error(w, "Usuário não autorizado a deletar esta postagem", http.StatusForbidden)
 		return
 	}

@@ -375,21 +375,22 @@ const Feed = () => {
     };
 
   const handleDeletePost = async () => {
+
+    handleCloseMenu();
+
     if (!selectedPost) return;
 
     const email = getEmailFromToken();
     if (!email) return;
 
     try {
-      const url = `delete-post?post_id=${selectedPost.ID}&email=${email}`;
+      const url = `anyUser/delete-post?post_id=${selectedPost.ID}&email=${email}`;
       await authService.delete(url);
       showSucessToast("Postagem deletada com sucesso!");
       await fetchPosts({ current: true });
     } catch (error) {
       showErrorToast("Erro ao deletar postagem.");
-    } finally {
-      handleCloseMenu();
-    }
+    } 
   };
 
 
