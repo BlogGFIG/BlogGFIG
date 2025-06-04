@@ -3,14 +3,25 @@ import { useForm, Controller } from "react-hook-form";
 import SubmitButton from '../../../../shared/components/buttons/SubmitButton';
 import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import { authService } from '../../../../services/AuthService';
-import Cookies from 'js-cookie';
 import { showErrorToast } from "../../../../shared/components/toasters/ErrorToaster";
 import { showSucessToast } from "../../../../shared/components/toasters/SucessToaster";
+import { jwtDecode } from "jwt-decode";
 
 function VisibilidadeDoPerfilPageContainer() {
   const { control, handleSubmit, setValue } = useForm();
   const [options, setOptions] = useState([]);
-  const userEmail = Cookies.get("email");
+
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
+  };
 
   useEffect(() => {
       const fetchData = async () => {
@@ -43,8 +54,9 @@ function VisibilidadeDoPerfilPageContainer() {
 
   const onSubmit = async (data) => {
       try {
+          const userEmail = getEmailFromToken();
           if (!userEmail) {
-              showErrorToast("Usuário não encontrado nos cookies");
+              showErrorToast("Usuário não encontrado no token");
               return;
           }
 
@@ -83,7 +95,7 @@ function VisibilidadeDoPerfilPageContainer() {
                 >
                   {options.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
-                      {option.description} {/* Alterado de label para description */}
+                      {option.description}
                     </MenuItem>
                   ))}
                 </Select>

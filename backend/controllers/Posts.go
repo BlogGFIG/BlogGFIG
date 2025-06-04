@@ -8,6 +8,7 @@ import (
 
 	"github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/models"
+	"github.com/BlogGFIG/BlogGFIG/utils"
 	"github.com/golang-jwt/jwt/v5"
 
 	"gorm.io/gorm"
@@ -86,11 +87,16 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	// Pegando os dados do formulário
 	title := r.FormValue("title")
 	content := r.FormValue("content")
-	imageFile, _, err := r.FormFile("image")
 
+	// Filtro de badwords
+	if utils.ContainsBadword(title) || utils.ContainsBadword(content) {
+		http.Error(w, "O título ou conteúdo contém palavras proibidas", http.StatusBadRequest)
+		return
+	}
+
+	imageFile, _, err := r.FormFile("image")
 	var imageBytes []byte
 	if err == nil {
-		// Lendo o conteúdo do arquivo de imagem e convertendo para []byte
 		imageBytes, err = io.ReadAll(imageFile)
 		if err != nil {
 			http.Error(w, "Erro ao ler a imagem", http.StatusInternalServerError)
@@ -111,7 +117,6 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Agora podemos armazenar a postagem, incluindo o user_id
 	post := models.Post{
 		Title:     title,
 		Content:   content,
@@ -121,14 +126,12 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		Pinned:    false,
 	}
 
-	// Inserção no banco de dados
 	result = dataBase.DB.Create(&post)
 	if result.Error != nil {
 		http.Error(w, "Erro ao salvar a postagem", http.StatusInternalServerError)
 		return
 	}
 
-	// Enviar resposta de sucesso
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("Postagem criada com sucesso!"))
 }
@@ -166,17 +169,13 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Remove o prefixo "Bearer " do token
 	tokenString := authHeader[len("Bearer "):]
-
-	// Valida o token e obtém as claims
 	claims, err := validateToken(tokenString)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	// Obtém o e-mail e o tipo de usuário das claims
 	email, ok := claims["email"].(string)
 	if !ok {
 		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
@@ -189,20 +188,24 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Defina o limite para o tamanho do arquivo
-	err = r.ParseMultipartForm(10 << 20) // 10 MB
+	err = r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		http.Error(w, "Erro ao processar o formulário", http.StatusBadRequest)
 		return
 	}
 
-	// Pegando os dados do formulário
 	postID := r.FormValue("post_id")
 	title := r.FormValue("title")
 	content := r.FormValue("content")
+
+	// Filtro de badwords
+	if (title != "" && utils.ContainsBadword(title)) || (content != "" && utils.ContainsBadword(content)) {
+		http.Error(w, "O título ou conteúdo contém palavras proibidas", http.StatusBadRequest)
+		return
+	}
+
 	imageFile, _, err := r.FormFile("image")
 
-	// Buscando a postagem com base no ID
 	var post models.Post
 	result := dataBase.DB.First(&post, postID)
 	if result.Error != nil {
@@ -214,20 +217,16 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validação de permissão para editar a postagem
 	if userType == "user" {
-		// Usuário comum só pode editar suas próprias postagens
 		if post.UserEmail != email {
 			http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
 			return
 		}
 	} else if userType != "admin" && userType != "master" {
-		// Apenas admin ou master podem editar qualquer postagem
 		http.Error(w, "Usuário não autorizado a editar esta postagem", http.StatusForbidden)
 		return
 	}
 
-	// Atualizando os campos da postagem
 	if title != "" {
 		post.Title = title
 	}
@@ -235,7 +234,6 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		post.Content = content
 	}
 	if err == nil {
-		// Lendo o conteúdo do arquivo de imagem e convertendo para []byte
 		imageBytes, err := io.ReadAll(imageFile)
 		if err != nil {
 			http.Error(w, "Erro ao ler a imagem", http.StatusInternalServerError)
@@ -245,14 +243,12 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		defer imageFile.Close()
 	}
 
-	// Salvando as alterações no banco de dados
 	result = dataBase.DB.Save(&post)
 	if result.Error != nil {
 		http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
 		return
 	}
 
-	// Enviar resposta de sucesso
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Postagem editada com sucesso!"))
 }

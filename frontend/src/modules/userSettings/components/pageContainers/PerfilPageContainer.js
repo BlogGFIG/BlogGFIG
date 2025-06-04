@@ -1,21 +1,33 @@
 import { Box } from "@mui/material";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import TextInput from '../../../../shared/components/inputs/TextInput';
 import SubmitButton from '../../../../shared/components/buttons/SubmitButton';
 import { authService } from '../../../../services/AuthService';
 import { showErrorToast } from "../../../../shared/components/toasters/ErrorToaster";
 import { showSucessToast } from "../../../../shared/components/toasters/SucessToaster";
-import Cookies from "js-cookie"; // Importando js-cookie
+import { jwtDecode } from "jwt-decode";
 
 function PerfilPageContainer() {
   const { register, handleSubmit } = useForm();
 
+  // Função para pegar o email do token
+  const getEmailFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.email || null;
+    } catch {
+      return null;
+    }
+  };
+
   const onSubmit = async (data) => {
-    const email = Cookies.get("email"); 
+    const email = getEmailFromToken();
 
     if (!email) {
-      showErrorToast("Email não encontrado nos cookies.");
+      showErrorToast("Email não encontrado no token.");
       return;
     }
 

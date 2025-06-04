@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { postService } from '../../../services/PostService';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
-import Cookies from 'js-cookie';
 
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
@@ -40,13 +39,10 @@ const PostagemForm = ({ onPostCreated, onClose }) => {
 
   const onSubmit = async (data) => {
     try {
-      const email = Cookies.get('email');
-
       const formData = new FormData();
       formData.append('title', data.title);
       formData.append('content', data.content);
       formData.append('image', image);
-      formData.append('email', email);
 
       const response = await postService.createPost(formData);
 
@@ -71,8 +67,21 @@ const PostagemForm = ({ onPostCreated, onClose }) => {
         return;
       }
 
-      const { status } = error.response;
-      if (status === 400) {
+      const { status, data } = error.response;
+      let errorMsg = '';
+      if (typeof data === 'string') {
+        errorMsg = data;
+      } else if (typeof data === 'object' && data.error) {
+        errorMsg = data.error;
+      }
+
+      if (
+        status === 400 &&
+        errorMsg &&
+        errorMsg.toLowerCase().includes('palavras proibidas')
+      ) {
+        showErrorToast('O título ou conteúdo contém palavras proibidas!');
+      } else if (status === 400) {
         showErrorToast('Erro nos dados fornecidos.');
       } else {
         showErrorToast('Erro ao criar postagem.');
