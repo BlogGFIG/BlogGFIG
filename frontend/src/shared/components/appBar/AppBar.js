@@ -13,7 +13,9 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const settings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Sair'];
+const masterSettings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Sair'];
+const adminSettings = ['Aprovar inscrição', 'Gerenciar postagens', 'Sair'];
+const userSettings = ['Sair'];
 const unauthenticatedSettings = ['Entrar'];
 
 function clearCookies() {
@@ -69,6 +71,13 @@ function ResponsiveAppBar() {
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
+  };
+
+  const getSettingsForRole = () => {
+    if (userRole === 'master') return masterSettings;
+    if (userRole === 'admin') return adminSettings;
+    if (userRole === 'user') return userSettings;
+    return [];
   };
 
   return (
@@ -131,32 +140,27 @@ function ResponsiveAppBar() {
                   <Typography textAlign="center">Entrar</Typography>
                 </MenuItem>
               ) : (
-                settings.map((setting) => {
-                  const isMasterOnly = ['Aprovar inscrição', 'Alterar níveis de permissão'].includes(setting);
-                  if (isMasterOnly && userRole !== 'master') return null;
-
-                  return (
-                    <MenuItem
-                      key={setting}
-                      onClick={() => {
-                        handleCloseUserMenu();
-                        if (setting === 'Sair') {
-                          localStorage.removeItem('token');
-                          clearCookies();
-                          navigate('/login');
-                        } else if (setting === 'Aprovar inscrição') {
-                          navigate('/UserActiveList');
-                        } else if (setting === 'Alterar níveis de permissão') {
-                          navigate('/UserList');
-                        } else if (setting === 'Gerenciar postagens') {
-                          navigate('/user/posts');
-                        }
-                      }}
-                    >
-                      <Typography textAlign="center">{setting}</Typography>
-                    </MenuItem>
-                  );
-                })
+                getSettingsForRole().map((setting) => (
+                  <MenuItem
+                    key={setting}
+                    onClick={() => {
+                      handleCloseUserMenu();
+                      if (setting === 'Sair') {
+                        localStorage.removeItem('token');
+                        clearCookies();
+                        navigate('/login');
+                      } else if (setting === 'Aprovar inscrição') {
+                        navigate('/UserActiveList');
+                      } else if (setting === 'Alterar níveis de permissão') {
+                        navigate('/UserList');
+                      } else if (setting === 'Gerenciar postagens') {
+                        navigate('/user/posts');
+                      }
+                    }}
+                  >
+                    <Typography textAlign="center">{setting}</Typography>
+                  </MenuItem>
+                ))
               )}
             </Menu>
           </Box>
