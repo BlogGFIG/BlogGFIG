@@ -13,7 +13,8 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const settings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens','Sair'];
+const settings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Sair'];
+const unauthenticatedSettings = ['Entrar'];
 
 function clearCookies() {
   document.cookie.split(";").forEach(function (c) {
@@ -26,6 +27,7 @@ function clearCookies() {
 function ResponsiveAppBar() {
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [userRole, setUserRole] = React.useState('');
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const navigate = useNavigate();
 
   const getEmailFromCookie = () => {
@@ -34,13 +36,16 @@ function ResponsiveAppBar() {
   };
 
   React.useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
+
+    if (!token) return;
+
     const fetchUserRole = async () => {
       try {
         const email = getEmailFromCookie();
         if (!email) return;
 
-        // Exemplo de requisição autenticada
-        const token = localStorage.getItem('token');
         const response = await axios.get('http://localhost:8000/get-user-type', {
           params: { email },
           headers: {
@@ -84,7 +89,7 @@ function ResponsiveAppBar() {
             sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
-            <AdbIcon sx={{ mr: 1, color: 'black' }} /> {/* ícone preto */}
+            <AdbIcon sx={{ mr: 1, color: 'black' }} />
             <Typography
               variant="h6"
               noWrap
@@ -92,7 +97,7 @@ function ResponsiveAppBar() {
                 fontFamily: 'monospace',
                 fontWeight: 700,
                 letterSpacing: '.3rem',
-                color: 'black', // texto preto
+                color: 'black',
                 textDecoration: 'none',
               }}
             >
@@ -116,32 +121,43 @@ function ResponsiveAppBar() {
               open={Boolean(anchorElUser)}
               onClose={handleCloseUserMenu}
             >
-              {settings.map((setting) => {
-                const isMasterOnly = ['Aprovar inscrição', 'Alterar níveis de permissão'].includes(setting);
-                if (isMasterOnly && userRole !== 'master') return null;
+              {!isAuthenticated ? (
+                <MenuItem
+                  onClick={() => {
+                    handleCloseUserMenu();
+                    navigate('/login');
+                  }}
+                >
+                  <Typography textAlign="center">Entrar</Typography>
+                </MenuItem>
+              ) : (
+                settings.map((setting) => {
+                  const isMasterOnly = ['Aprovar inscrição', 'Alterar níveis de permissão'].includes(setting);
+                  if (isMasterOnly && userRole !== 'master') return null;
 
-                return (
-                  <MenuItem
-                    key={setting}
-                    onClick={() => {
-                      handleCloseUserMenu();
-                      if (setting === 'Sair') {
-                        localStorage.removeItem('token');
-                        clearCookies();
-                        navigate('/login');
-                      } else if (setting === 'Aprovar inscrição') {
-                        navigate('/UserActiveList');
-                      } else if (setting === 'Alterar níveis de permissão') {
-                        navigate('/UserList');
-                      } else if (setting === 'Gerenciar postagens') {
-                        navigate('/user/posts');
-                      }
-                    }}
-                  >
-                    <Typography textAlign="center">{setting}</Typography>
-                  </MenuItem>
-                );
-              })}
+                  return (
+                    <MenuItem
+                      key={setting}
+                      onClick={() => {
+                        handleCloseUserMenu();
+                        if (setting === 'Sair') {
+                          localStorage.removeItem('token');
+                          clearCookies();
+                          navigate('/login');
+                        } else if (setting === 'Aprovar inscrição') {
+                          navigate('/UserActiveList');
+                        } else if (setting === 'Alterar níveis de permissão') {
+                          navigate('/UserList');
+                        } else if (setting === 'Gerenciar postagens') {
+                          navigate('/user/posts');
+                        }
+                      }}
+                    >
+                      <Typography textAlign="center">{setting}</Typography>
+                    </MenuItem>
+                  );
+                })
+              )}
             </Menu>
           </Box>
         </Toolbar>
