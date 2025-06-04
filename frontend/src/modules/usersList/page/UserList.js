@@ -100,9 +100,25 @@ const UserList = () => {
   };
 
   const handleSaveUserRole = (userId, newRole) => {
-    const requesterEmail = Cookies.get('email');
+    // Pega o token do localStorage
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Token não encontrado.');
+      return;
+    }
+
+    // Decodifica o token para pegar o email
+    let requesterEmail;
+    try {
+      const decoded = jwtDecode(token);
+      requesterEmail = decoded.email;
+    } catch (e) {
+      alert('Token inválido.');
+      return;
+    }
+
     if (!requesterEmail) {
-      alert('E-mail do usuário não encontrado nos cookies.');
+      alert('E-mail do usuário não encontrado no token.');
       return;
     }
 
@@ -111,8 +127,6 @@ const UserList = () => {
       role: newRole,
       requester_email: requesterEmail
     };
-
-    const token = localStorage.getItem('token');
 
     axios.put("http://localhost:8000/master/updateUserRole", payload, {
       headers: {
@@ -124,7 +138,11 @@ const UserList = () => {
         showSucessToast("Nível de usuário atualizado com sucesso!");
 
         // Recarregar os dados após salvar
-        axios.get("http://localhost:8000/admin/users")
+        axios.get("http://localhost:8000/admin/users", {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
           .then(response => {
             setUsers(response.data); // Atualiza o estado com os dados mais recentes
           })
@@ -142,7 +160,21 @@ const UserList = () => {
   if (loading) return <div>Carregando...</div>;
 
   // Não filtra por status, pois não existe esse campo
-  const sortedUsers = users;
+  // const sortedUsers = users;
+  // Filtra para mostrar apenas usuários cujo user_type é diferente de 'pending'
+  const sortedUsers = users.filter(user => user.user_type !== 'pending' && user.user_type !== 'reproved');
+
+  // Pega o email do usuário logado a partir do token
+  let loggedUserEmail = "";
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      loggedUserEmail = decoded.email;
+    } catch (e) {
+      loggedUserEmail = "";
+    }
+  }
 
   return (
     <Box sx={{ width: '98%', overflowX: 'auto', padding: 2 }}>
@@ -169,6 +201,10 @@ const UserList = () => {
                         value={user.user_type || ""}
                         onChange={(e) => handleUserTypeChange(user.id, e.target.value)}
                         sx={{ backgroundColor: '#fff' }}
+                        disabled={
+                          user.user_type === "master" &&
+                          user.email === loggedUserEmail
+                        }
                       >
                         <MenuItem value="admin">Admin</MenuItem>
                         <MenuItem value="master">Master</MenuItem>
@@ -183,6 +219,10 @@ const UserList = () => {
                       color="primary"
                       onClick={() => handleSaveUserRole(user.id, user.user_type)}
                       sx={{ marginLeft: 1 }}
+                      disabled={
+                        user.user_type === "master" &&
+                        user.email === loggedUserEmail
+                      }
                     >
                       Salvar
                     </Button>
