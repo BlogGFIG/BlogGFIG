@@ -536,32 +536,35 @@ const Feed = () => {
 
                               {/* Lado direito: botões */}
                               <Box sx={{ display: 'flex', gap: '8px' }}>
-                                <Button
-                                  variant="text"
-                                  onClick={() => handleEditComment(comment, post)}
-                                  sx={{
-                                    minWidth: '40px',
-                                    '&:hover': {
-                                      backgroundColor: '#e0e0e0',
-                                    },
-                                  }}
-                                >
-                                  <EditIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
-                                </Button>
+                                {localStorage.getItem('token') && (
+                                  <>
+                                    <Button
+                                      variant="text"
+                                      onClick={() => handleEditComment(comment, post)}
+                                      sx={{
+                                        minWidth: '40px',
+                                        '&:hover': {
+                                          backgroundColor: '#e0e0e0',
+                                        },
+                                      }}
+                                    >
+                                      <EditIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
+                                    </Button>
 
-                                <Button
-                                  variant="text"
-                                  onClick={() => handleDeleteComment(comment.id, post)}
-                                  sx={{
-                                    minWidth: '40px',
-                                    '&:hover': {
-                                      backgroundColor: '#e0e0e0',
-                                    },
-                                  }}
-                                >
-                                  <DeleteIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
-                                </Button>
-
+                                    <Button
+                                      variant="text"
+                                      onClick={() => handleDeleteComment(comment.id, post)}
+                                      sx={{
+                                        minWidth: '40px',
+                                        '&:hover': {
+                                          backgroundColor: '#e0e0e0',
+                                        },
+                                      }}
+                                    >
+                                      <DeleteIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
+                                    </Button>
+                                  </>
+                                )}
                               </Box>
                             </Box>
                           ))}
