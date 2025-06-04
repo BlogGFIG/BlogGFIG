@@ -74,6 +74,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
 
         <TextInput
           id={'email'}
+          type={'email'}
           label={'E-mail'}
           register={register}
           sx={{ width: '100%' }}
@@ -81,6 +82,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
 
         <PasswordInput
           id={'password'}
+          type={'password'}
           label={'Senha'}
           register={register}
           sx={{ width: '100%' }}
@@ -90,6 +92,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
           <>
             <PasswordInput
               id={'passwordConfirmation'}
+              type={'password'}
               label={'Confirmar senha'}
               register={register}
               sx={{ width: '100%' }}
@@ -97,6 +100,7 @@ const AuthForm = ({ isSignUp, setIsSignUp }) => {
 
             <TextInput
               id={'name'}
+              type={'name'}
               label={'Nome'}
               register={register}
               sx={{ width: '100%' }}
