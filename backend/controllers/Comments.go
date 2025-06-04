@@ -166,14 +166,31 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificando se o comentário foi criado por um usuário anônimo
+	// Extrai o tipo de usuário do token JWT
+	userType := ""
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" {
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte("bloggfig@2025"), nil
+		})
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			if t, ok := claims["userType"].(string); ok {
+				if userType == "" {
+					userType = t
+				}
+			}
+		}
+	}
+
+	// Permite editar comentários anônimos apenas para admin/master
 	if comment.UserEmail == "Anônimo" {
-		http.Error(w, "Comentários anônimos não podem ser editados", http.StatusForbidden)
+		http.Error(w, "Comentários anônimos só podem ser excluídos", http.StatusForbidden)
 		return
 	}
 
-	// Verificando se o e-mail do usuário corresponde ao criador do comentário
-	if comment.UserEmail != commentRequest.UserEmail {
+	// Permite editar se for o autor OU admin/master
+	if comment.UserEmail != commentRequest.UserEmail{
 		http.Error(w, "Usuário não autorizado a editar este comentário", http.StatusForbidden)
 		return
 	}
@@ -232,13 +249,13 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Verificando se o comentário é anônimo
 	if comment.UserEmail == "Anônimo" {
 		// Apenas administradores podem excluir comentários anônimos
-		if user.UserType != "admin" {
+		if user.UserType != "admin" && user.UserType != "master" {
 			http.Error(w, "Apenas administradores podem excluir comentários anônimos", http.StatusForbidden)
 			return
 		}
 	} else {
 		// Verificando se o usuário é o autor do comentário ou um admin
-		if comment.UserEmail != deleteRequest.UserEmail && user.UserType != "admin" {
+		if comment.UserEmail != deleteRequest.UserEmail && user.UserType != "admin" && user.UserType != "master" {
 			http.Error(w, "Usuário não autorizado a deletar este comentário", http.StatusForbidden)
 			return
 		}

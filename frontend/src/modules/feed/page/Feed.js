@@ -70,7 +70,7 @@ const Feed = () => {
         userEmail: currentUserEmail,
       });
 
-      await authService.put('edit-comment', {
+      await authService.put('anyUser/edit-comment', {
         commentId: selectedCommentId,
         content: editCommentContent,
         userEmail: currentUserEmail,
@@ -119,7 +119,7 @@ const Feed = () => {
 
       console.log("Enviando requisição DELETE para excluir comentário...");
 
-      await authService.delete('delete-comment', {
+      await authService.delete('anyUser/delete-comment', {
         data: {
           commentId: commentId,
           userEmail: email,
@@ -538,31 +538,42 @@ const Feed = () => {
                               <Box sx={{ display: 'flex', gap: '8px' }}>
                                 {localStorage.getItem('token') && (
                                   <>
-                                    <Button
-                                      variant="text"
-                                      onClick={() => handleEditComment(comment, post)}
-                                      sx={{
-                                        minWidth: '40px',
-                                        '&:hover': {
-                                          backgroundColor: '#e0e0e0',
-                                        },
-                                      }}
-                                    >
-                                      <EditIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
-                                    </Button>
+                                    {/* Botão de editar: só para o autor */}
+                                    {getEmailFromToken() &&
+                                      (comment.userEmail === getEmailFromToken() || comment.user_email === getEmailFromToken()) && (
+                                        <Button
+                                          variant="text"
+                                          onClick={() => handleEditComment(comment, post)}
+                                          sx={{
+                                            minWidth: '40px',
+                                            '&:hover': {
+                                              backgroundColor: '#e0e0e0',
+                                            },
+                                          }}
+                                        >
+                                          <EditIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
+                                        </Button>
+                                    )}
 
-                                    <Button
-                                      variant="text"
-                                      onClick={() => handleDeleteComment(comment.id, post)}
-                                      sx={{
-                                        minWidth: '40px',
-                                        '&:hover': {
-                                          backgroundColor: '#e0e0e0',
-                                        },
-                                      }}
-                                    >
-                                      <DeleteIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
-                                    </Button>
+                                    {/* Botão de excluir: para o autor OU admin/master */}
+                                    {(getEmailFromToken() &&
+                                      (comment.userEmail === getEmailFromToken() ||
+                                       comment.user_email === getEmailFromToken() ||
+                                       loggedUserRole === "admin" ||
+                                       loggedUserRole === "master")) && (
+                                      <Button
+                                        variant="text"
+                                        onClick={() => handleDeleteComment(comment.id, post)}
+                                        sx={{
+                                          minWidth: '40px',
+                                          '&:hover': {
+                                            backgroundColor: '#e0e0e0',
+                                          },
+                                        }}
+                                      >
+                                        <DeleteIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
+                                      </Button>
+                                    )}
                                   </>
                                 )}
                               </Box>
