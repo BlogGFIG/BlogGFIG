@@ -81,7 +81,12 @@ function ResponsiveAppBar() {
             sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
-            <AdbIcon sx={{ mr: 1, color: 'black' }} />
+            <Box
+              component="img"
+              src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaGVpZ2h0PSI1MTIiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0aXRsZS8+PHBhdGggZD0iTTQ3Ny42NCwzOC4yNmE0Ljc1LDQuNzUsMCwwLDAtMy41NS0zLjY2Yy01OC41Ny0xNC4zMi0xOTMuOSwzNi43MS0yNjcuMjIsMTEwYTMxNywzMTcsMCwwLDAtMzUuNjMsNDIuMWMtMjIuNjEtMi00NS4yMi0uMzMtNjQuNDksOC4wN0M1Mi4zOCwyMTguNywzNi41NSwyODEuMTQsMzIuMTQsMzA4YTkuNjQsOS42NCwwLDAsMCwxMC41NSwxMS4yTDEzMCwzMDkuNTdhMTk0LjEsMTk0LjEsMCwwLDAsMS4xOSwxOS43LDE5LjUzLDE5LjUzLDAsMCwwLDUuNywxMkwxNzAuNywzNzVhMTkuNTksMTkuNTksMCwwLDAsMTIsNS43LDE5My41MywxOTMuNTMsMCwwLDAsMTkuNTksMS4xOWwtOS41OCw4Ny4yYTkuNjUsOS42NSwwLDAsMCwxMS4yLDEwLjU1YzI2LjgxLTQuMyw4OS4zNi0yMC4xMywxMTMuMTUtNzQuNSw4LjQtMTkuMjcsMTAuMTItNDEuNzcsOC4xOC02NC4yN2EzMTcuNjYsMzE3LjY2LDAsMCwwLDQyLjIxLTM1LjY0QzQ0MSwyMzIuMDUsNDkxLjc0LDk5Ljc0LDQ3Ny42NCwzOC4yNlpNMjk0LjA3LDIxNy45M2E0OCw0OCwwLDEsMSw2Ny44NiwwQTQ3Ljk1LDQ3Ljk1LDAsMCwxLDI5NC4wNywyMTcuOTNaIi8+PHBhdGggZD0iTTE2OC40LDM5OS40M2MtNS40OCw1LjQ5LTE0LjI3LDcuNjMtMjQuODUsOS40Ni0yMy43Nyw0LjA1LTQ0Ljc2LTE2LjQ5LTQwLjQ5LTQwLjUyLDEuNjMtOS4xMSw2LjQ1LTIxLjg4LDkuNDUtMjQuODhhNC4zNyw0LjM3LDAsMCwwLTMuNjUtNy40NSw2MCw2MCwwLDAsMC0zNS4xMywxNy4xMkM1MC4yMiwzNzYuNjksNDgsNDY0LDQ4LDQ2NHM4Ny4zNi0yLjIyLDExMC44Ny0yNS43NUE1OS42OSw1OS42OSwwLDAsMCwxNzYsNDAzLjA5QzE3Ni4zNywzOTguOTEsMTcxLjI4LDM5Ni40MiwxNjguNCwzOTkuNDNaIi8+PC9zdmc+"
+              alt="Logo"
+              sx={{ width: 32, height: 32, mr: 1 }}
+            />
             <Typography
               variant="h6"
               noWrap
@@ -93,7 +98,7 @@ function ResponsiveAppBar() {
                 textDecoration: 'none',
               }}
             >
-              LOGO
+              GFIG
             </Typography>
           </Box>
 
