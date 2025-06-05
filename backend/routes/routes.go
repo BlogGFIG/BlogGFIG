@@ -53,8 +53,11 @@ func HandleRequest() http.Handler {
 	// Rota para deletar uma postagem (USUÁRIO AUTENTICADO) (DELETE)
 	anyUserRoutes.HandleFunc("/delete-post", controllers.DeletePost).Methods("DELETE")
 
+	// Rota para buscar todas as postagens (ADMIN E MASTER) (GET)
+	adminRoutes.HandleFunc("/posts-gerenciar", controllers.GetPosts).Methods("GET")
+
 	// Rota para buscar todas as postagens (TODOS) (GET)
-	r.HandleFunc("/posts", controllers.GetPosts).Methods("GET")
+	r.HandleFunc("/posts-feed", controllers.GetUnarchivedPosts).Methods("GET")
 
 	// Rota para fixar uma postagem (USUÁRIO AUTENTICADO) (PUT)
 	anyUserRoutes.HandleFunc("/pin-post", controllers.PinPost).Methods("PUT")
@@ -89,11 +92,8 @@ func HandleRequest() http.Handler {
 	// Rota para obter o tipo de usuário pelo e-mail (TODOS) (GET)
 	r.HandleFunc("/get-user-type", controllers.GetUserTypeByToken).Methods("GET")
 
-	// Rota para arquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
-	anyUserRoutes.HandleFunc("/archive-post", controllers.ArchivePost).Methods("PUT")
-
-	// Rota para desarquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
-	anyUserRoutes.HandleFunc("/unarchive-post", controllers.UnarchivePost).Methods("PUT")
+	// Rota para arquivar ou desarquivar uma postagem (USUÁRIO AUTENTICADO) (PUT)
+	adminRoutes.HandleFunc("/archive-or-unarchive-post", controllers.ArchiveOrUnarchivePost).Methods("PUT")
 
 	// Rota para deletar um usuário (USUÁRIO AUTENTICADO) (DELETE)
 	anyUserRoutes.HandleFunc("/deleteUser", controllers.DeleteUser).Methods("DELETE")

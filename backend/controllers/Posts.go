@@ -180,6 +180,51 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(postsResponse)
 }
 
+// GetUnarchivedPosts: Lista todas as postagens não arquivadas
+func GetUnarchivedPosts(w http.ResponseWriter, r *http.Request) {
+	type PostWithUser struct {
+		models.Post
+		UserName  string    `json:"user_name"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+	}
+
+	type PostResponse struct {
+		models.Post
+		UserName  string `json:"user_name"`
+		CreatedBR string `json:"created_br"`
+		UpdatedBR string `json:"updated_br"`
+	}
+
+	var postsWithUsers []PostWithUser
+	result := dataBase.DB.Table("posts").
+		Select("posts.*, users.name as user_name").
+		Joins("inner join users on users.id = posts.user_id").
+		Where("posts.archived = ?", false).
+		Order("posts.pinned DESC").
+		Order("posts.created_at DESC").
+		Scan(&postsWithUsers)
+
+	if result.Error != nil {
+		http.Error(w, "Erro ao buscar postagens", http.StatusInternalServerError)
+		return
+	}
+
+	// Monta a resposta já formatada
+	var postsResponse []PostResponse
+	for _, post := range postsWithUsers {
+		postsResponse = append(postsResponse, PostResponse{
+			Post:      post.Post,
+			UserName:  post.UserName,
+			CreatedBR: post.CreatedAt.Format("02/01/2006 15:04:05"),
+			UpdatedBR: post.UpdatedAt.Format("02/01/2006 15:04:05"),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(postsResponse)
+}
+
 // EditPost: Função para editar uma postagem existente
 func EditPost(w http.ResponseWriter, r *http.Request) {
 	// Validação do token
@@ -452,8 +497,8 @@ func UnpinPost(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Postagem desfixada com sucesso!"))
 }
 
-// ArchivePost: Função para arquivar uma postagem
-func ArchivePost(w http.ResponseWriter, r *http.Request) {
+// ArchiveOrUnarchivePost: Função para arquivar ou desarquivar uma postagem
+func ArchiveOrUnarchivePost(w http.ResponseWriter, r *http.Request) {
 	// Validação do token
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -486,7 +531,8 @@ func ArchivePost(w http.ResponseWriter, r *http.Request) {
 
 	// Recebe os dados do corpo da requisição
 	var request struct {
-		PostID uint `json:"postId"`
+		PostID   uint `json:"postId"`
+		Archived bool `json:"archived"` // true para arquivar, false para desarquivar
 	}
 	err = json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -518,112 +564,35 @@ func ArchivePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validando se o usuário pode arquivar a postagem
+	// Validando se o usuário pode arquivar/desarquivar a postagem
 	if post.UserID != user.ID && userType != "admin" && userType != "master" {
-		http.Error(w, "Usuário não autorizado a arquivar esta postagem", http.StatusForbidden)
+		http.Error(w, "Usuário não autorizado a alterar o status de arquivamento desta postagem", http.StatusForbidden)
 		return
 	}
 
-	// Arquivando a postagem
-	post.Archived = true
+	// Verifica se já está no estado desejado
+	if post.Archived == request.Archived {
+		status := "arquivada"
+		if !request.Archived {
+			status = "desarquivada"
+		}
+		http.Error(w, fmt.Sprintf("A postagem já está %s", status), http.StatusBadRequest)
+		return
+	}
+
+	// Atualiza o status de arquivamento
+	post.Archived = request.Archived
 	result = dataBase.DB.Save(&post)
 	if result.Error != nil {
-		http.Error(w, "Erro ao arquivar a postagem", http.StatusInternalServerError)
+		http.Error(w, "Erro ao atualizar o status de arquivamento da postagem", http.StatusInternalServerError)
 		return
 	}
 
-	// Resposta de sucesso
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Postagem arquivada com sucesso!"))
-}
-
-// UnarchivePost: Função para desarquivar uma postagem
-func UnarchivePost(w http.ResponseWriter, r *http.Request) {
-	// Validação do token
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Token não fornecido", http.StatusUnauthorized)
-		return
+	if request.Archived {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Postagem arquivada com sucesso!"))
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Postagem desarquivada com sucesso!"))
 	}
-
-	// Remove o prefixo "Bearer " do token
-	tokenString := authHeader[len("Bearer "):]
-
-	// Valida o token e obtém as claims
-	claims, err := validateToken(tokenString)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	// Obtém o e-mail e o tipo de usuário das claims
-	email, ok := claims["email"].(string)
-	if !ok {
-		http.Error(w, "E-mail não encontrado no token", http.StatusInternalServerError)
-		return
-	}
-
-	userType, ok := claims["role"].(string)
-	if !ok {
-		http.Error(w, "Tipo de usuário não encontrado no token", http.StatusInternalServerError)
-		return
-	}
-
-	// Recebe os dados do corpo da requisição
-	var request struct {
-		PostID uint `json:"postId"`
-	}
-	err = json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		http.Error(w, "Erro ao ler os dados da requisição", http.StatusBadRequest)
-		return
-	}
-
-	// Buscando o usuário pelo e-mail
-	var user models.User
-	result := dataBase.DB.Where("email = ?", email).First(&user)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			http.Error(w, "Usuário não encontrado", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Erro ao buscar usuário", http.StatusInternalServerError)
-		return
-	}
-
-	// Buscando a postagem com base no ID
-	var post models.Post
-	result = dataBase.DB.First(&post, request.PostID)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			http.Error(w, "Postagem não encontrada", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Erro ao buscar postagem", http.StatusInternalServerError)
-		return
-	}
-
-	// Validando se o usuário pode desarquivar a postagem
-	if post.UserID != user.ID && userType != "admin" && userType != "master" {
-		http.Error(w, "Usuário não autorizado a desarquivar esta postagem", http.StatusForbidden)
-		return
-	}
-
-	// Verificando se a postagem já está desarquivada
-	if !post.Archived {
-		http.Error(w, "A postagem já está desarquivada", http.StatusBadRequest)
-		return
-	}
-
-	// Desarquivando a postagem
-	post.Archived = false
-	result = dataBase.DB.Save(&post)
-	if result.Error != nil {
-		http.Error(w, "Erro ao desarquivar a postagem", http.StatusInternalServerError)
-		return
-	}
-
-	// Resposta de sucesso
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Postagem desarquivada com sucesso!"))
 }

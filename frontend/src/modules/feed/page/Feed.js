@@ -201,7 +201,7 @@ const Feed = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await authService.get("posts");
+      const response = await authService.get("posts-feed");
       console.log("POSTS RECEBIDOS:", response.data); // <-- Adicione isto
 
       if (response.data && isMountedRef.current) {

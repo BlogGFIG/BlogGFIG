@@ -37,6 +37,7 @@ const UserPosts = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [postFormDialogOpen, setPostFormDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Estado para imagem expandida
   const [expandedImageSrc, setExpandedImageSrc] = useState(null);
@@ -58,13 +59,22 @@ const UserPosts = () => {
   };
 
   useEffect(() => {
-    fetch("https://backend-gfig.onrender.com/posts")
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    fetch("http://localhost:8000/admin/posts-gerenciar", {
+      method: "GET",
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+    })
       .then((response) => response.json())
       .then((data) => {
         setPosts(data);
+        setLoading(false);
         console.log("Postagens carregadas:", data);
       })
       .catch((error) => {
+        setLoading(false);
         console.error("Erro ao carregar postagens:", error);
       });
   }, []);
@@ -157,7 +167,13 @@ const UserPosts = () => {
   };
 
   const handlePostCreated = () => {
-    fetch("http://localhost:8000/posts")
+    const token = localStorage.getItem('token');
+    fetch("http://localhost:8000/admin/posts-gerenciar", {
+      method: "GET",
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+    })
       .then((response) => response.json())
       .then((data) => setPosts(data));
   };
@@ -184,6 +200,24 @@ const UserPosts = () => {
       return 0;
     });
   }, [posts, search, orderBy, order]);
+
+  const handleArchiveOrUnarchive = async (postId, archived) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:8000/admin/archive-or-unarchive-post', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ postId, archived }),
+      });
+      showSucessToast(archived ? 'Postagem arquivada!' : 'Postagem desarquivada!');
+      handlePostCreated(); // Atualiza a lista após a ação
+    } catch (error) {
+      showErrorToast('Erro ao alterar o status de arquivamento da postagem.');
+    }
+  };
 
   return (
     <Box sx={{ padding: 3, width: '1200px', display: 'flex', flexDirection: 'column', gap: 2, margin: '0 auto', alignItems: 'center' }}>
@@ -231,7 +265,11 @@ const UserPosts = () => {
         </Box>
 
         {filteredAndSortedPosts.length === 0 ? (
-          <Typography>Sem postagens para mostrar.</Typography>
+          loading ? (
+            <Typography>Carregando lista de postagens...</Typography>
+          ) : (
+            <Typography>Sem postagens para mostrar.</Typography>
+          )
         ) : (
           <Table>
             <TableHead sx={{ backgroundColor: '#F4F6F8' }}>
@@ -294,6 +332,25 @@ const UserPosts = () => {
                       >
                         Excluir
                       </Button>
+                      {post.Archived ? (
+                        <Button
+                          variant="outlined"
+                          color="warning"
+                          size="small"
+                          onClick={() => handleArchiveOrUnarchive(post.ID, false)}
+                        >
+                          Desarquivar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          color="info"
+                          size="small"
+                          onClick={() => handleArchiveOrUnarchive(post.ID, true)}
+                        >
+                          Arquivar
+                        </Button>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>
