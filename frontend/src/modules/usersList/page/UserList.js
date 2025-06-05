@@ -10,6 +10,8 @@ const UserList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [searchReproved, setSearchReproved] = useState("");
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -82,16 +84,58 @@ const UserList = () => {
     // Busca o usuário atual
     const user = users.find(u => u.id === userId);
 
+    let aprovado = null;
+
+    if (user.user_type === "reproved") {
+      // Reativa e muda o tipo para "user"
+      const confirmed = window.confirm("Tem certeza que deseja reativar esse usuário?");
+      if (!confirmed) return;
+
+      const token = localStorage.getItem('token');
+      const payload = {
+        id: userId,
+        role: "user",
+        requester_email: requesterEmail
+      };
+
+      axios.put("http://localhost:8000/admin/approveOrRejectUser", {
+        id: userId,
+        role: "user"
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+        .then(() => {
+          showSucessToast("Usuário ativado com sucesso!");
+          // Atualize a lista de usuários aqui
+          const token = localStorage.getItem('token');
+          axios.get("http://localhost:8000/admin/users", {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
+            .then(response => setUsers(response.data))
+            .catch(() => showErrorToast("Erro ao buscar usuários."));
+        })
+        .catch(error => {
+          showErrorToast("Erro ao ativar usuário");
+        });
+      return;
+    }
+
     // Confirmação antes de marcar como reprovado
     if (user.user_type !== "reproved") {
       const confirmed = window.confirm("Tem certeza que deseja desativar esse usuário?");
       if (!confirmed) return;
+      aprovado = false; // Inativa o usuário
     }
 
-    // Sempre envia para o backend
+    // Sempre envia para o backend para inativar/reprovar
     const payload = {
       id: userId,
-      aprovado: false // false para inativar/reprovar
+      aprovado: aprovado,
+      requester_email: requesterEmail
     };
 
     const token = localStorage.getItem('token');
@@ -183,8 +227,17 @@ const UserList = () => {
 
   // Não filtra por status, pois não existe esse campo
   // const sortedUsers = users;
-  // Filtra para mostrar apenas usuários cujo user_type é diferente de 'pending'
+  // Filtra para mostrar apenas usuários cujo user_type é diferente de 'pending' e 'reproved'
   const sortedUsers = users.filter(user => user.user_type !== 'pending' && user.user_type !== 'reproved');
+
+  // Filtra apenas usuários reprovados
+  const reprovedUsers = users.filter(user => user.user_type === 'reproved');
+
+  // Filtra os reprovados conforme o texto digitado
+  const filteredReprovedUsers = reprovedUsers.filter(user =>
+    user.name?.toLowerCase().includes(searchReproved.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchReproved.toLowerCase())
+  );
 
   // Pega o email do usuário logado a partir do token
   let loggedUserEmail = "";
@@ -198,9 +251,29 @@ const UserList = () => {
     }
   }
 
+  // Filtro para a primeira tabela (usuários não reprovados e não pendentes)
+  const filteredSortedUsers = sortedUsers.filter(user =>
+    user.name?.toLowerCase().includes(search.toLowerCase()) ||
+    user.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <Box sx={{ width: '98%', overflowX: 'auto', padding: 2 }}>
-      <Paper sx={{ width: '100%', overflow: 'auto', boxShadow: 3 }}>
+      <Paper sx={{ width: '100%', overflow: 'auto', boxShadow: 3, mb: 4 }}>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <input
+            type="text"
+            placeholder="Pesquisar usuário..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              padding: '8px',
+              borderRadius: '8px',
+              border: '1px solid #ccc',
+              width: '300px'
+            }}
+          />
+        </Box>
         <TableContainer>
           <Table stickyHeader sx={{ minWidth: 650 }}>
             <TableHead>
@@ -212,7 +285,7 @@ const UserList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {sortedUsers.map(user => (
+              {filteredSortedUsers.map(user => (
                 <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
                   <TableCell sx={{ wordBreak: 'break-word' }}>{user.name}</TableCell>
                   <TableCell sx={{ wordBreak: 'break-word' }}>{user.email}</TableCell>
@@ -237,11 +310,11 @@ const UserList = () => {
                   <TableCell>
                     <Button
                       variant="contained"
-                      color={user.status === "ativo" ? "secondary" : "primary"}
+                      color={user.status === "Inativo" ? "secondary" : "primary"}
                       onClick={() => handleToggleUserStatus(user.id, user.status)}
                       disabled={user.user_type === "master" && user.email === loggedUserEmail}
                     >
-                      {user.status === "ativo" ? "Inativar" : "Ativar"}
+                      {user.status === "Inativo" ? "Ativar" : "Inativar"}
                     </Button>
                     <Button
                       variant="outlined"
@@ -254,6 +327,62 @@ const UserList = () => {
                   </TableCell>
                 </TableRow>
               ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* Tabela de usuários reprovados */}
+      <Paper sx={{ width: '100%', overflow: 'auto', boxShadow: 3, mb: 2 }}>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <input
+            type="text"
+            placeholder="Pesquisar usuário reprovado..."
+            value={searchReproved}
+            onChange={e => setSearchReproved(e.target.value)}
+            style={{
+              padding: '8px',
+              borderRadius: '8px',
+              border: '1px solid #ccc',
+              width: '300px'
+            }}
+          />
+        </Box>
+        <TableContainer>
+          <Table stickyHeader sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5c6cb' }}>
+                <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Nome do Usuário</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Endereço de E-mail</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Tipo de Usuário</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'black' }}>Ação</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredReprovedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    Nenhum usuário reprovado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredReprovedUsers.map(user => (
+                  <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                    <TableCell sx={{ wordBreak: 'break-word' }}>{user.name}</TableCell>
+                    <TableCell sx={{ wordBreak: 'break-word' }}>{user.email}</TableCell>
+                    <TableCell>{user.user_type}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleToggleUserStatus(user.id, user.status)}
+                      >
+                        Ativar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
