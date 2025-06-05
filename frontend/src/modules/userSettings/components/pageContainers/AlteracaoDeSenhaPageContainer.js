@@ -25,7 +25,7 @@ function AlteracaoDeSenhaPageContainer() {
       const token = localStorage.getItem("token");
       const email = getEmailFromToken();
       await axios.put(
-        "hhttps://backend-gfig.onrender.com/anyUser/senhaPage",
+        "https://backend-gfig.onrender.com/anyUser/senhaPage", // Corrigido aqui
         {
           email, // adicione o email aqui!
           password: senhaAtual,
