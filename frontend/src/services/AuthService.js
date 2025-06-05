@@ -3,7 +3,7 @@
 import axios from "axios";
 
 // const API_URL = "https://backend-gfig.onrender.com";
-const API_URL = "http://localhost:8000";
+const API_URL = "https://backend-gfig.onrender.com";
 
 // Função auxiliar para pegar o token do localStorage
 const getAuthHeaders = () => {

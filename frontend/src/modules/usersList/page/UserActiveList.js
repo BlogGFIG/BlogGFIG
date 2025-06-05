@@ -51,7 +51,7 @@ const UserActiveList = () => {
       return;
     }
 
-    axios.get("http://localhost:8000/admin/users", {
+    axios.get("https://backend-gfig.onrender.com/admin/users", {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -82,7 +82,7 @@ const UserActiveList = () => {
       role: newUserType
     };
 
-    axios.put("http://localhost:8000/admin/approveOrRejectUser", payload, {
+    axios.put("https://backend-gfig.onrender.com/admin/approveOrRejectUser", payload, {
       headers: {
         Authorization: `Bearer ${token}`
       }

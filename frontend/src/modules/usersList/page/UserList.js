@@ -34,7 +34,7 @@ const UserList = () => {
   useEffect(() => {
     if (userRole === "admin" || userRole === "master") {
       const token = localStorage.getItem('token');
-      axios.get("http://localhost:8000/admin/users", {
+      axios.get("https://backend-gfig.onrender.com/admin/users", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -98,7 +98,7 @@ const UserList = () => {
         requester_email: requesterEmail
       };
 
-      axios.put("http://localhost:8000/admin/approveOrRejectUser", {
+      axios.put("https://backend-gfig.onrender.com/admin/approveOrRejectUser", {
         id: userId,
         role: "user"
       }, {
@@ -110,7 +110,7 @@ const UserList = () => {
           showSucessToast("Usuário ativado com sucesso!");
           // Atualize a lista de usuários aqui
           const token = localStorage.getItem('token');
-          axios.get("http://localhost:8000/admin/users", {
+          axios.get("https://backend-gfig.onrender.com/admin/users", {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -140,7 +140,7 @@ const UserList = () => {
 
     const token = localStorage.getItem('token');
 
-    axios.put("http://localhost:8000/admin/ativarOuInativar", payload, {
+    axios.put("https://backend-gfig.onrender.com/admin/ativarOuInativar", payload, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -194,7 +194,7 @@ const UserList = () => {
       requester_email: requesterEmail
     };
 
-    axios.put("http://localhost:8000/master/updateUserRole", payload, {
+    axios.put("https://backend-gfig.onrender.com/master/updateUserRole", payload, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -204,7 +204,7 @@ const UserList = () => {
         showSucessToast("Nível de usuário atualizado com sucesso!");
 
         // Recarregar os dados após salvar
-        axios.get("http://localhost:8000/admin/users", {
+        axios.get("https://backend-gfig.onrender.com/admin/users", {
           headers: {
             Authorization: `Bearer ${token}`
           }

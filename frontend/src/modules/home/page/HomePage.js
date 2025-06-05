@@ -38,7 +38,7 @@ const HomePage = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:8000/get-user-type', {
+        const response = await axios.get('https://backend-gfig.onrender.com/get-user-type', {
           params: { email: email },
         });
 

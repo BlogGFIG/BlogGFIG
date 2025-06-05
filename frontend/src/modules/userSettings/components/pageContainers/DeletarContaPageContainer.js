@@ -17,7 +17,7 @@ function DeletarContaPageContainer() {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete("http://localhost:8000/anyUser/deleteUser", {
+      await axios.delete("https://backend-gfig.onrender.com/anyUser/deleteUser", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

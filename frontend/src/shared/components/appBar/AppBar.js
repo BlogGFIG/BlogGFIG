@@ -32,7 +32,7 @@ function ResponsiveAppBar() {
 
     const fetchUserRole = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/get-user-type', {
+        const response = await axios.get('https://backend-gfig.onrender.com/get-user-type', {
           headers: {
             Authorization: `Bearer ${token}`
           }
