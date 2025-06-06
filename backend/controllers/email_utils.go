@@ -16,9 +16,18 @@ func sendResetEmail(to, resetLink string) error {
     smtpHost := "smtp.gmail.com"
     smtpPort := "587"
 
-    // Mensagem do e-mail
-    message := []byte("Subject: Redefinição de Senha\n\n" +
-        "Para redefinir sua senha, clique no link a seguir:\n" + resetLink)
+    // Mensagem do e-mail em HTML
+    message := []byte("Subject: Redefinição de Senha\r\n" +
+        "MIME-version: 1.0;\r\n" +
+        "Content-Type: text/html; charset=\"UTF-8\";\r\n\r\n" +
+        "<div style='font-family: Arial, sans-serif;'>" +
+        "<h2>Olá!</h2>" +
+        "<p>Você solicitou a redefinição de senha para sua conta no <b>GFIG</b>.</p>" +
+        "<p>Digite o seguinte código ou clique no link abaixo para redefinir sua senha:</p>" +
+        "<div style='font-size: 1.5em; font-weight: bold; color: #1976d2; margin: 16px 0;'>" + resetLink + "</div>" +
+        "<p>Se você não solicitou, ignore este e-mail.</p>" +
+        "<br><p>Atenciosamente,<br>Equipe GFIG</p>" +
+        "</div>")
 
     // Autenticação
     auth := smtp.PlainAuth("", from, password, smtpHost)
