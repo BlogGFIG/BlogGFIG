@@ -326,64 +326,64 @@ const Feed = () => {
   };
 
   const handleSaveEditPost = async () => {
-      if (!selectedPost || !selectedPost.ID) {
-        console.log("ID da postagem inválido ou não encontrado!", selectedPost);
-        return;
-      }
-    
-      handleCloseMenu();
-    
-      console.log('Salvando edição...');
-  
-      const formData = new FormData();
-      formData.append("post_id", selectedPost.ID.toString());
-      formData.append("title", editTitle);
-      formData.append("content", editContent);
-      // Pegue o email do token
-      const email = getEmailFromToken();
-      formData.append("email", email);
-  
-      try {
-        await authService.put("anyUser/edit-post", formData);
-  
-        setPosts((prevPosts) =>
-          prevPosts.map((p) =>
-            p.ID === selectedPost.ID
-              ? { ...p, Title: editTitle, Content: editContent }
-              : p
-          )
-        );
-  
-        setEditDialogOpen(false);
-        setSnackbarMessage("Postagem atualizada!");
-        setSnackbarOpen(true);
-        showSucessToast("Postagem atualizada com sucesso!");
-        await fetchPosts({ current: true });
-      } catch (error) {
-        console.error("Erro ao editar a postagem:", error);
-  
-        if (error.response) {
-          const { status, data } = error.response;
-          let errorMsg = '';
-          if (typeof data === 'string') {
-            errorMsg = data;
-          } else if (typeof data === 'object' && data.error) {
-            errorMsg = data.error;
-          }
-  
-          if (
-            status === 400 &&
-            errorMsg &&
-            errorMsg.toLowerCase().includes('palavras proibidas')
-          ) {
-            showErrorToast('O título ou conteúdo contém palavras proibidas!');
-            return;
-          }
+    if (!selectedPost || !selectedPost.ID) {
+      console.log("ID da postagem inválido ou não encontrado!", selectedPost);
+      return;
+    }
+
+    handleCloseMenu();
+
+    console.log('Salvando edição...');
+
+    const formData = new FormData();
+    formData.append("post_id", selectedPost.ID.toString());
+    formData.append("title", editTitle);
+    formData.append("content", editContent);
+    // Pegue o email do token
+    const email = getEmailFromToken();
+    formData.append("email", email);
+
+    try {
+      await authService.put("anyUser/edit-post", formData);
+
+      setPosts((prevPosts) =>
+        prevPosts.map((p) =>
+          p.ID === selectedPost.ID
+            ? { ...p, Title: editTitle, Content: editContent }
+            : p
+        )
+      );
+
+      setEditDialogOpen(false);
+      setSnackbarMessage("Postagem atualizada!");
+      setSnackbarOpen(true);
+      showSucessToast("Postagem atualizada com sucesso!");
+      await fetchPosts({ current: true });
+    } catch (error) {
+      console.error("Erro ao editar a postagem:", error);
+
+      if (error.response) {
+        const { status, data } = error.response;
+        let errorMsg = '';
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (typeof data === 'object' && data.error) {
+          errorMsg = data.error;
         }
-  
-        showErrorToast("Erro ao editar a postagem.");
+
+        if (
+          status === 400 &&
+          errorMsg &&
+          errorMsg.toLowerCase().includes('palavras proibidas')
+        ) {
+          showErrorToast('O título ou conteúdo contém palavras proibidas!');
+          return;
+        }
       }
-    };
+
+      showErrorToast("Erro ao editar a postagem.");
+    }
+  };
 
   const handleDeletePost = async () => {
 
@@ -401,7 +401,7 @@ const Feed = () => {
       await fetchPosts({ current: true });
     } catch (error) {
       showErrorToast("Erro ao deletar postagem.");
-    } 
+    }
   };
 
 
@@ -456,12 +456,28 @@ const Feed = () => {
 
                   {/* Box vertical para nome e email */}
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 'bold', color: '#1D252E' }}
-                    >
-                      {post.user_name || 'Nome não disponível'}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 'bold', color: '#1D252E' }}
+                      >
+                        {post.user_name || 'Nome não disponível'}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ marginLeft: 1 }}
+                      >
+                        {/* Data de criação ou edição */}
+                        {post.updated_br && post.updated_br !== post.created_br ? (
+                          <>
+                            {post.updated_br} <b>E</b>
+                          </>
+                        ) : (
+                          post.created_br
+                        )}
+                      </Typography>
+                    </Box>
                     <Typography
                       variant="body2"
                       color="textSecondary"
@@ -471,7 +487,12 @@ const Feed = () => {
                   </Box>
 
                   <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-                    {post.Pinned && <PushPinIcon fontSize="small" color="primary" sx={{ marginRight: '8px' }} />}
+                    {post.Pinned && (
+                      <PushPinIcon
+                        fontSize="small"
+                        sx={{ marginRight: '8px', color: '#1D252E' }}
+                      />
+                    )}
                     {['admin', 'master'].includes(loggedUserRole) && (
                       <IconButton onClick={(e) => handleClickMenu(e, post)}>
                         <MoreVertIcon />
@@ -484,32 +505,22 @@ const Feed = () => {
                   <Typography sx={{ fontWeight: 'bold' }}>
                     {post.Title}
                   </Typography>
-                  {/* Data de criação ou edição */}
-                  <Typography variant="caption" color="text.secondary" sx={{ marginBottom: '4px' }}>
-                    {post.updated_br && post.updated_br !== post.created_br ? (
-                      <>
-                        {post.updated_br} <b>E</b>
-                      </>
-                    ) : (
-                      post.created_br
-                    )}
-                  </Typography>
                   <Typography color="textSecondary">
                     {post.Content}
                   </Typography>
                 </Box>
 
                 {post.Image &&
-  post.Image.trim() !== "" &&
-  post.Image !== "TlVMTA==" && ( // "TlVMTA==" é "NULL" em base64
-  <Box sx={{ height: '400px', overflow: 'hidden', borderRadius: '8px' }}>
-    <img
-      src={`data:image/png;base64,${post.Image}`}
-      alt="Imagem do post"
-      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-    />
-  </Box>
-)}
+                  post.Image.trim() !== "" &&
+                  post.Image !== "TlVMTA==" && ( // "TlVMTA==" é "NULL" em base64
+                    <Box sx={{ height: '400px', overflow: 'hidden', borderRadius: '8px' }}>
+                      <img
+                        src={`data:image/png;base64,${post.Image}`}
+                        alt="Imagem do post"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  )}
                 <Box sx={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
                   {comments[post.ID]?.length > 0 ? (
                     <>
@@ -577,14 +588,14 @@ const Feed = () => {
                                         >
                                           <EditIcon sx={{ color: '#ADB6C0', scale: '0.8' }} />
                                         </Button>
-                                    )}
+                                      )}
 
                                     {/* Botão de excluir: para o autor OU admin/master */}
                                     {(getEmailFromToken() &&
                                       (comment.userEmail === getEmailFromToken() ||
-                                       comment.user_email === getEmailFromToken() ||
-                                       loggedUserRole === "admin" ||
-                                       loggedUserRole === "master")) && (
+                                        comment.user_email === getEmailFromToken() ||
+                                        loggedUserRole === "admin" ||
+                                        loggedUserRole === "master")) && (
                                       <Button
                                         variant="text"
                                         onClick={() => handleDeleteComment(comment.id, post)}
@@ -603,6 +614,7 @@ const Feed = () => {
                               </Box>
                             </Box>
                           ))}
+
                       </Box>
 
                       {/* Botão para visualizar todos */}
@@ -727,7 +739,13 @@ const Feed = () => {
           </Menu>
         )}
 
-        <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+        <Dialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          PaperProps={{
+            sx: { borderRadius: 3 } // Deixa o Dialog arredondado
+          }}
+        >
           <DialogTitle>Editar Postagem</DialogTitle>
           <DialogContent>
             <TextField
@@ -750,15 +768,46 @@ const Feed = () => {
               sx={{ marginTop: 2 }}
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)} color="secondary">
+          <DialogActions sx={{ justifyContent: 'center' }}>
+            <Button
+              onClick={() => setEditDialogOpen(false)}
+              variant="outlined"
+              sx={{
+                color: '#B71D18',
+                borderColor: '#B71D18',
+                '&:hover': {
+                  backgroundColor: '#fff',
+                  borderColor: '#B71D18',
+                },
+              }}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSaveEditPost}>Salvar</Button>
-
+            <Button
+              onClick={handleSaveEditPost}
+              variant="contained"
+              sx={{
+                backgroundColor: '#1D252E',
+                color: '#fff',
+                border: '1.5px solid #1D252E',
+                '&:hover': {
+                  backgroundColor: '#fff',
+                  color: '#1D252E',
+                  border: '1.5px solid #1D252E',
+                },
+              }}
+            >
+              Salvar
+            </Button>
           </DialogActions>
         </Dialog>
-        <Dialog open={editCommentDialogOpen} onClose={() => setEditCommentDialogOpen(false)}>
+        <Dialog
+          open={editCommentDialogOpen}
+          onClose={() => setEditCommentDialogOpen(false)}
+          PaperProps={{
+            sx: { borderRadius: 3 } // Deixa o Dialog arredondado
+          }}
+        >
           <DialogTitle>Editar Comentário</DialogTitle>
           <DialogContent>
             <TextField
@@ -770,11 +819,37 @@ const Feed = () => {
               onChange={(e) => setEditCommentContent(e.target.value)}
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditCommentDialogOpen(false)} color="secondary">
+          <DialogActions sx={{ justifyContent: 'center' }}>
+            <Button
+              onClick={() => setEditCommentDialogOpen(false)}
+              variant="outlined"
+              sx={{
+                color: '#B71D18',
+                borderColor: '#B71D18',
+                '&:hover': {
+                  backgroundColor: '#fff',
+                  borderColor: '#B71D18',
+                },
+              }}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSaveEditComment}>Salvar</Button>
+            <Button
+              onClick={handleSaveEditComment}
+              variant="contained"
+              sx={{
+                backgroundColor: '#1D252E',
+                color: '#fff',
+                border: '1.5px solid #1D252E',
+                '&:hover': {
+                  backgroundColor: '#fff',
+                  color: '#1D252E',
+                  border: '1.5px solid #1D252E',
+                },
+              }}
+            >
+              Salvar
+            </Button>
           </DialogActions>
         </Dialog>
 
@@ -786,8 +861,8 @@ const Feed = () => {
           message={snackbarMessage}
         />
       </Box>
-    </Box>
-  );
+
+    </Box>  );
 };
 
 export default Feed;

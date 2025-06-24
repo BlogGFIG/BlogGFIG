@@ -3,7 +3,7 @@ import { authService } from '../../../services/AuthService';
 import PostForm from '../../home/components/PostForm';
 import { showSucessToast } from '../../../shared/components/toasters/SucessToaster';
 import { showErrorToast } from '../../../shared/components/toasters/ErrorToaster';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 import {
   Dialog,
@@ -61,7 +61,7 @@ const UserPosts = () => {
   useEffect(() => {
     setLoading(true);
     const token = localStorage.getItem('token');
-    fetch("http://localhost:8000/admin/posts-gerenciar", {
+    fetch("https://backend-gfig.onrender.com/admin/posts-gerenciar", {
       method: "GET",
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
@@ -168,7 +168,7 @@ const UserPosts = () => {
 
   const handlePostCreated = () => {
     const token = localStorage.getItem('token');
-    fetch("http://localhost:8000/admin/posts-gerenciar", {
+    fetch("https://backend-gfig.onrender.com/admin/posts-gerenciar", {
       method: "GET",
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
@@ -204,7 +204,7 @@ const UserPosts = () => {
   const handleArchiveOrUnarchive = async (postId, archived) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:8000/admin/archive-or-unarchive-post', {
+      await fetch('https://backend-gfig.onrender.com/admin/archive-or-unarchive-post', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -377,7 +377,9 @@ const UserPosts = () => {
 
 
       {/* Dialog para edição do post */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editDialogOpen} PaperProps={{
+        sx: { borderRadius: 3 }
+      }} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Editar Postagem</DialogTitle>
         <DialogContent>
           <TextField
@@ -400,11 +402,37 @@ const UserPosts = () => {
             onChange={(e) => setEditContent(e.target.value)}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)} color="secondary">
+        <DialogActions
+          sx={{ justifyContent: 'center' }} // Centraliza os botões
+        >
+          <Button
+            onClick={() => setEditDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              color: '#B71D18',
+              borderColor: '#B71D18',
+              '&:hover': {
+                backgroundColor: '#fff',
+                borderColor: '#B71D18',
+              },
+            }}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSaveEditPost} variant="contained" color="primary">
+          <Button
+            onClick={handleSaveEditPost}
+            variant="contained"
+            sx={{
+              backgroundColor: '#1D252E',
+              color: '#fff',
+              border: '1.5px solid #1D252E',
+              '&:hover': {
+                backgroundColor: '#fff',
+                color: '#1D252E',
+                border: '1.5px solid #1D252E',
+              },
+            }}
+          >
             Salvar
           </Button>
         </DialogActions>

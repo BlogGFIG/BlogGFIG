@@ -51,7 +51,7 @@ const UserActiveList = () => {
       return;
     }
 
-    axios.get("http://localhost:8000/admin/users", {
+    axios.get("https://backend-gfig.onrender.com/admin/users", {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -82,7 +82,7 @@ const UserActiveList = () => {
       role: newUserType
     };
 
-    axios.put("http://localhost:8000/admin/approveOrRejectUser", payload, {
+    axios.put("https://backend-gfig.onrender.com/admin/approveOrRejectUser", payload, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -192,7 +192,7 @@ const UserActiveList = () => {
                       <Button
                         variant="contained"
                         size="small"
-                        sx={{ backgroundColor: '#34d399', color: '#fff', textTransform: 'none' }}
+                        sx={{ backgroundColor: '#1C252E', color: '#fff', textTransform: 'none' }}
                         onClick={() => handleUserApproval(user.id, 'approve')}
                       >
                         Aprovar
@@ -201,7 +201,7 @@ const UserActiveList = () => {
                         variant="outlined"
                         size="small"
                         color="error"
-                        sx={{ textTransform: 'none' }}
+                        sx={{ textTransform: 'none', borderColor: '#B71D18', color: '#B71D18' }}
                         onClick={() => handleUserApproval(user.id, 'reject')}
                       >
                         Reprovar

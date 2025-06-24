@@ -17,7 +17,7 @@ function DeletarContaPageContainer() {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete("http://localhost:8000/anyUser/deleteUser", {
+      await axios.delete("https://backend-gfig.onrender.com/anyUser/deleteUser", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -38,23 +38,44 @@ function DeletarContaPageContainer() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: 400, mx: "auto", mt: 4 }}>
-        <Typography variant="h6" color="error">Deletar Conta</Typography>
-        <TextField
-          label="Digite sua senha para confirmar"
-          type="password"
-          {...register("senha", { required: true })}
-          required
-        />
-        <SubmitButton text={'Deletar conta'} />
-        {mensagem && (
-          <Typography color={mensagem.includes("sucesso") ? "primary" : "error"}>
-            {mensagem}
-          </Typography>
-        )}
-      </Box>
-    </form>
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{
+        width: '100%',
+        maxWidth: 400,
+        mx: "auto",
+        mt: 4,
+        backgroundColor: "#fff",
+        borderRadius: 4,
+        boxShadow: "0 2px 16px 0 rgba(145, 158, 171, 0.10)",
+        p: 4,
+        display: "flex",
+        flexDirection: "column",
+        gap: 2.5,
+        alignItems: "center",
+      }}
+    >
+      <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'error.main', mb: 2 }}>
+        Deletar Conta
+      </Typography>
+      <TextField
+        label="Digite sua senha para confirmar"
+        type="password"
+        {...register("senha", { required: true })}
+        required
+        fullWidth
+      />
+      <SubmitButton text={'Deletar conta'} sx={{ width: "100%" }} />
+      {mensagem && (
+        <Typography
+          sx={{ mt: 1, fontWeight: 'bold' }}
+          color={mensagem.includes("sucesso") ? "primary" : "error"}
+        >
+          {mensagem}
+        </Typography>
+      )}
+    </Box>
   );
 }
 

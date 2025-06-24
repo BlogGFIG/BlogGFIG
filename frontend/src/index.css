@@ -15,3 +15,14 @@ code {
 .UserSettings{
   z-index: 0;
 }
+img[alt*="Toolpad"], [class*="logo"], [class*="Logo"], [aria-label*="Toolpad"], [title*="Toolpad"], [data-testid*="logo"] {
+  display: none !important;
+}
+
+*:contains("Toolpad") {
+  display: none !important;
+}
+
+.MuiStack-root.css-1d9cypr-MuiStack-root {
+  display: none !important;
+}
