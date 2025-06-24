@@ -58,14 +58,34 @@ function AlteracaoDeSenhaPageContainer() {
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 400, mx: "auto", mt: 4, display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h6">Alterar Senha</Typography>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        width: '100%',
+        maxWidth: 400,
+        mx: "auto",
+        mt: 4,
+        backgroundColor: "#fff",
+        borderRadius: 4,
+        boxShadow: "0 2px 16px 0 rgba(145, 158, 171, 0.10)",
+        p: 4,
+        display: "flex",
+        flexDirection: "column",
+        gap: 2.5,
+        alignItems: "center",
+      }}
+    >
+      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+        Alterar Senha
+      </Typography>
       <TextField
         label="Senha atual"
         type="password"
         value={senhaAtual}
         onChange={(e) => setSenhaAtual(e.target.value)}
         required
+        fullWidth
       />
       <TextField
         label="Nova senha"
@@ -73,6 +93,7 @@ function AlteracaoDeSenhaPageContainer() {
         value={novaSenha}
         onChange={(e) => setNovaSenha(e.target.value)}
         required
+        fullWidth
       />
       <TextField
         label="Confirmar nova senha"
@@ -80,11 +101,37 @@ function AlteracaoDeSenhaPageContainer() {
         value={confirmarSenha}
         onChange={(e) => setConfirmarSenha(e.target.value)}
         required
+        fullWidth
       />
-      <Button type="submit" variant="contained" color="primary">
+      <Button
+        type="submit"
+        variant="contained"
+        sx={{
+          mt: 2,
+          width: "100%",
+          textTransform: "none",
+          fontWeight: "bold",
+          borderRadius: 2,
+          boxShadow: "none",
+          backgroundColor: "#1D252E",
+          color: "#fff",
+          '&:hover': {
+            backgroundColor: "#fff",
+            color: "#1D252E",
+            border: "1.5px solid #1D252E",
+          },
+        }}
+      >
         Atualizar Senha
       </Button>
-      {mensagem && <Typography color={mensagem.includes("sucesso") ? "primary" : "error"}>{mensagem}</Typography>}
+      {mensagem && (
+        <Typography
+          sx={{ mt: 1, fontWeight: 'bold' }}
+          color={mensagem.includes("sucesso") ? "primary" : "error"}
+        >
+          {mensagem}
+        </Typography>
+      )}
     </Box>
   );
 }

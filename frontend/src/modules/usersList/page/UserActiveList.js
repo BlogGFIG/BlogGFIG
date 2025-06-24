@@ -192,7 +192,7 @@ const UserActiveList = () => {
                       <Button
                         variant="contained"
                         size="small"
-                        sx={{ backgroundColor: '#34d399', color: '#fff', textTransform: 'none' }}
+                        sx={{ backgroundColor: '#1C252E', color: '#fff', textTransform: 'none' }}
                         onClick={() => handleUserApproval(user.id, 'approve')}
                       >
                         Aprovar
@@ -201,7 +201,7 @@ const UserActiveList = () => {
                         variant="outlined"
                         size="small"
                         color="error"
-                        sx={{ textTransform: 'none' }}
+                        sx={{ textTransform: 'none', borderColor: '#B71D18', color: '#B71D18' }}
                         onClick={() => handleUserApproval(user.id, 'reject')}
                       >
                         Reprovar

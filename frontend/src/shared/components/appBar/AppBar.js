@@ -10,6 +10,7 @@ import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import AdbIcon from '@mui/icons-material/Adb';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -88,7 +89,7 @@ function ResponsiveAppBar() {
             sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
-            <AdbIcon sx={{ mr: 1, color: 'black' }} />
+            <RocketLaunchIcon sx={{ color: '#1D252E', fontSize: 28, mr: 1 }} />
             <Typography
               variant="h6"
               noWrap
@@ -96,11 +97,11 @@ function ResponsiveAppBar() {
                 fontFamily: 'monospace',
                 fontWeight: 700,
                 letterSpacing: '.3rem',
-                color: 'black',
+                color: '#1D252E',
                 textDecoration: 'none',
               }}
             >
-              LOGO
+              GFIG
             </Typography>
           </Box>
 
