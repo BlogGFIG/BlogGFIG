@@ -14,11 +14,20 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { jwtDecode } from 'jwt-decode';
 
 function parseUTCDate(dateString) {
-  // Se já for ISO, retorna direto
   if (!dateString) return null;
-  if (dateString.includes('T')) return new Date(dateString);
-  // Se vier como "2025-06-04 17:23:00", transforma em "2025-06-04T17:23:00Z"
-  return new Date(dateString.replace(' ', 'T') + 'Z');
+  // Remove milissegundos se existirem
+  const clean = dateString.split('.')[0];
+  // Adiciona 'Z' para forçar UTC
+  return new Date(clean.replace(' ', 'T') + 'Z');
+}
+
+function parseBRDateString(dateStr) {
+  // dateStr: "dd/MM/yyyy HH:mm:ss"
+  if (!dateStr) return null;
+  const [datePart, timePart] = dateStr.split(' ');
+  if (!datePart || !timePart) return null;
+  const [day, month, year] = datePart.split('/');
+  return new Date(`${year}-${month}-${day}T${timePart}`);
 }
 
 const token = localStorage.getItem('token');
@@ -471,10 +480,10 @@ const Feed = () => {
                         {/* Data de criação ou edição */}
                         {post.updated_br && post.updated_br !== post.created_br ? (
                           <>
-                            {post.updated_br} <b>E</b>
+                            {parseBRDateString(post.updated_br).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} <b>E</b>
                           </>
                         ) : (
-                          post.created_br
+                          parseBRDateString(post.created_br).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
                         )}
                       </Typography>
                     </Box>
@@ -558,7 +567,9 @@ const Feed = () => {
                                       {comment.userName || comment.user_name || 'Anônimo'}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                                      {comment.date ? new Date(comment.date).toLocaleString('pt-BR') : '01/01/2023'}
+                                      {comment.date
+                                        ? parseUTCDate(comment.date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+                                        : '01/01/2023'}
                                     </Typography>
                                   </Box>
 

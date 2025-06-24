@@ -167,11 +167,12 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	// Monta a resposta já formatada
 	var postsResponse []PostResponse
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
 	for _, post := range postsWithUsers {
 		postsResponse = append(postsResponse, PostResponse{
 			Post:      post.Post,
 			UserName:  post.UserName,
-			CreatedBR: post.CreatedAt.Format("02/01/2006 15:04:05"),
+			CreatedBR: post.CreatedAt.In(loc).Format("02/01/2006 15:04:05"),
 			UpdatedBR: post.UpdatedAt.Format("02/01/2006 15:04:05"),
 		})
 	}
@@ -212,11 +213,12 @@ func GetUnarchivedPosts(w http.ResponseWriter, r *http.Request) {
 
 	// Monta a resposta já formatada
 	var postsResponse []PostResponse
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
 	for _, post := range postsWithUsers {
 		postsResponse = append(postsResponse, PostResponse{
 			Post:      post.Post,
 			UserName:  post.UserName,
-			CreatedBR: post.CreatedAt.Format("02/01/2006 15:04:05"),
+			CreatedBR: post.CreatedAt.In(loc).Format("02/01/2006 15:04:05"),
 			UpdatedBR: post.UpdatedAt.Format("02/01/2006 15:04:05"),
 		})
 	}
@@ -308,7 +310,6 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		defer imageFile.Close()
 	}
 
-	post.UpdatedAt = time.Now().UTC()
 	result = dataBase.DB.Save(&post)
 	if result.Error != nil {
 		http.Error(w, "Erro ao salvar alterações na postagem", http.StatusInternalServerError)
