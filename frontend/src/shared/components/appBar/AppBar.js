@@ -13,6 +13,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { jwtDecode } from "jwt-decode";
 
 const masterSettings = ['Aprovar inscrição', 'Alterar níveis de permissão', 'Gerenciar postagens', 'Configurações', 'Sair'];
 const adminSettings = ['Aprovar inscrição', 'Gerenciar postagens', 'Configurações', 'Sair'];
@@ -23,6 +24,7 @@ function ResponsiveAppBar() {
   const [anchorElUser, setAnchorElUser] = React.useState(null);
   const [userRole, setUserRole] = React.useState('');
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [userName, setUserName] = React.useState(''); // Novo estado
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -31,22 +33,13 @@ function ResponsiveAppBar() {
 
     if (!token) return;
 
-    const fetchUserRole = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/get-user-type', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        const role = response.data.replace('Tipo de usuário: ', '').trim();
-        setUserRole(role);
-      } catch (error) {
-        console.error('Erro ao obter o papel do usuário', error);
-      }
-    };
-
-    fetchUserRole();
+    try {
+      const decoded = jwtDecode(token);
+      setUserName(decoded.name || decoded.userName || ''); // Ajuste conforme o campo do seu token
+      setUserRole(decoded.role || '');
+    } catch (error) {
+      console.error('Erro ao decodificar token', error);
+    }
   }, []);
 
   const handleOpenUserMenu = (event) => {
@@ -102,8 +95,16 @@ function ResponsiveAppBar() {
               }}
             >
               GFIG
+              GFIG
             </Typography>
           </Box>
+
+          {/* Mensagem de boas-vindas */}
+          {isAuthenticated && userName && (
+            <Typography sx={{ color: 'black', mr: 2 }}>
+              Olá, {userName}
+            </Typography>
+          )}
 
           {/* Ícone de usuário */}
           <Box sx={{ flexGrow: 0 }}>

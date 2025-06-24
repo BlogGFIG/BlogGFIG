@@ -38,7 +38,7 @@ import React, { useEffect, useState } from 'react';
     useEffect(() => {
       if (userRole === "admin" || userRole === "master") {
         const token = localStorage.getItem('token');
-        axios.get("http://localhost:8000/admin/users", {
+        axios.get("https://backend-gfig.onrender.com/admin/users", {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -102,7 +102,7 @@ import React, { useEffect, useState } from 'react';
           requester_email: requesterEmail
         };
 
-        axios.put("http://localhost:8000/admin/approveOrRejectUser", {
+        axios.put("https://backend-gfig.onrender.com/admin/approveOrRejectUser", {
           id: userId,
           role: "user"
         }, {
@@ -114,7 +114,7 @@ import React, { useEffect, useState } from 'react';
             showSucessToast("Usuário ativado com sucesso!");
             // Atualize a lista de usuários aqui
             const token = localStorage.getItem('token');
-            axios.get("http://localhost:8000/admin/users", {
+            axios.get("https://backend-gfig.onrender.com/admin/users", {
               headers: {
                 Authorization: `Bearer ${token}`
               }
@@ -144,7 +144,7 @@ import React, { useEffect, useState } from 'react';
 
       const token = localStorage.getItem('token');
 
-      axios.put("http://localhost:8000/admin/ativarOuInativar", payload, {
+      axios.put("https://backend-gfig.onrender.com/admin/ativarOuInativar", payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -198,7 +198,7 @@ import React, { useEffect, useState } from 'react';
         requester_email: requesterEmail
       };
 
-      axios.put("http://localhost:8000/master/updateUserRole", payload, {
+      axios.put("https://backend-gfig.onrender.com/master/updateUserRole", payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -208,7 +208,7 @@ import React, { useEffect, useState } from 'react';
           showSucessToast("Nível de usuário atualizado com sucesso!");
 
           // Recarregar os dados após salvar
-          axios.get("http://localhost:8000/admin/users", {
+          axios.get("https://backend-gfig.onrender.com/admin/users", {
             headers: {
               Authorization: `Bearer ${token}`
             }

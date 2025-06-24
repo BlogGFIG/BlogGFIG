@@ -2,6 +2,7 @@ package dataBase
 
 import (
 	"log"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -26,4 +27,9 @@ func ConnectDB() {
 	} else {
 		log.Println("Conexão com banco de dados realizada com sucesso")
 	}
+
+	sqlDB, _ := DB.DB()
+	sqlDB.SetMaxOpenConns(5)
+	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 }

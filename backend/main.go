@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	database "github.com/BlogGFIG/BlogGFIG/dataBase"
 	"github.com/BlogGFIG/BlogGFIG/routes"
@@ -25,6 +26,13 @@ func main() {
 		port = "8000"
 	}
 
+	srv := &http.Server{
+		Addr:         "0.0.0.0:" + port,
+		Handler:      router,
+		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 	log.Printf("Servidor escutando na porta %s", port)
-	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, router))
+	log.Fatal(srv.ListenAndServe())
 }

@@ -61,7 +61,7 @@ const UserPosts = () => {
   useEffect(() => {
     setLoading(true);
     const token = localStorage.getItem('token');
-    fetch("http://localhost:8000/admin/posts-gerenciar", {
+    fetch("https://backend-gfig.onrender.com/admin/posts-gerenciar", {
       method: "GET",
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
@@ -168,7 +168,7 @@ const UserPosts = () => {
 
   const handlePostCreated = () => {
     const token = localStorage.getItem('token');
-    fetch("http://localhost:8000/admin/posts-gerenciar", {
+    fetch("https://backend-gfig.onrender.com/admin/posts-gerenciar", {
       method: "GET",
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
@@ -204,7 +204,7 @@ const UserPosts = () => {
   const handleArchiveOrUnarchive = async (postId, archived) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:8000/admin/archive-or-unarchive-post', {
+      await fetch('https://backend-gfig.onrender.com/admin/archive-or-unarchive-post', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

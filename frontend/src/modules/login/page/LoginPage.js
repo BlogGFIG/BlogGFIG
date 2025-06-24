@@ -92,7 +92,7 @@ const LoginPage = () => {
                                     setResetMessage('');
                                     setResetError('');
                                     try {
-                                        const res = await fetch('http://localhost:8000/resetPassword', {
+                                        const res = await fetch('https://backend-gfig.onrender.com/resetPassword', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ email: resetEmail }),
@@ -159,7 +159,7 @@ const LoginPage = () => {
                                         return;
                                     }
                                     try {
-                                        const res = await fetch('http://localhost:8000/updatePassword', {
+                                        const res = await fetch('https://backend-gfig.onrender.com/updatePassword', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { showErrorToast } from '../shared/components/toasters/ErrorToaster';
 
-const API_URL = "http://localhost:8000";
+const API_URL = "https://backend-gfig.onrender.com";
 
 export const postService = {
   createPost: async (formData) => {
