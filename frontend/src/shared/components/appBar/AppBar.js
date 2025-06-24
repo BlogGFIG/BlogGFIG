@@ -95,7 +95,6 @@ function ResponsiveAppBar() {
               }}
             >
               GFIG
-              GFIG
             </Typography>
           </Box>
 
